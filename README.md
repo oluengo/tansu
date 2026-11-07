@@ -25,7 +25,7 @@ Explorador de los datos que tus apps de Nostr guardan en tu cuenta: copias de se
 
 ## Web
 
-También en el navegador, con PWA opcional: **[oluengo.github.io/tansu](https://oluengo.github.io/tansu/)** (beta en [/tansu/beta](https://oluengo.github.io/tansu/beta/)). Entra con Amber (Android), una extensión NIP-07, un bunker o una npub. Más en [`web/`](web/README.md).
+También en el navegador, con PWA opcional: **[oluengo.github.io/tansu/app](https://oluengo.github.io/tansu/app/)** (beta en [/tansu/beta](https://oluengo.github.io/tansu/beta/); presentación en [/tansu](https://oluengo.github.io/tansu/)). Entra con Amber (Android), una extensión NIP-07, un bunker o una npub. Más en [`web/`](web/README.md).
 
 ## Instalar la beta
 

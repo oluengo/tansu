@@ -6,7 +6,7 @@ La misma app en el navegador, con PWA opcional (se puede instalar; sin instalar 
 - **Privado:** igual que en Android, todo lo que se publica va cifrado con NIP-44 para la propia cuenta.
 - Las cuentas y la papelera se guardan solo en ese navegador (localStorage e IndexedDB).
 
-Publicada por `.github/workflows/pages.yml`: `main` → `oluengo.github.io/tansu/`, `beta` → `oluengo.github.io/tansu/beta/`.
+Publicada por `.github/workflows/pages.yml`: `main` → `oluengo.github.io/tansu/app/`, `beta` → `oluengo.github.io/tansu/beta/`. La página de presentación (`site/`) va en `oluengo.github.io/tansu/`.
 
 ## Archivos
 

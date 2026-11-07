@@ -1,6 +1,7 @@
-# Tansu web en GitHub Pages:
-# - rama main → https://oluengo.github.io/tansu/
-# - rama beta → https://oluengo.github.io/tansu/beta/ (versión de pruebas, con sus datos aparte)
+# Tansu en GitHub Pages (como Usus y Wavestr):
+# - /tansu/       → página de presentación (carpeta site/)
+# - /tansu/app/   → la app web (carpeta web/ de main)
+# - /tansu/beta/  → la app web de la rama beta (versión de pruebas, con sus datos aparte)
 # El entorno github-pages solo admite publicar desde main: un push a beta relanza este flujo sobre main,
 # que monta las dos ramas (main en la raíz y beta en /beta/).
 name: Web
@@ -8,7 +9,7 @@ name: Web
 on:
   push:
     branches: [main, beta]
-    paths: ["web/**", ".github/workflows/pages.yml"]
+    paths: ["site/**", "web/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -48,8 +49,9 @@ jobs:
       - name: Montar el sitio
         run: |
           WEB="index.html app.js app.css i18n.js nostr.js sw.js manifest.webmanifest icon.svg icon-192.png icon-512.png icon-maskable-512.png favicon-48.png"
-          mkdir -p _site
-          for f in $WEB; do cp "main/web/$f" _site/; done
+          mkdir -p _site/app
+          cp -r main/site/. _site/
+          for f in $WEB; do cp "main/web/$f" _site/app/; done
           touch _site/.nojekyll
           if [ -f beta/web/index.html ]; then
             mkdir -p _site/beta
