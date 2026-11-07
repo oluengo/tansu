@@ -37,7 +37,9 @@ jobs:
       # Versión normal: etiqueta v* empujada o «Publicar versión» desde Actions (en main).
       RELEASE: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main')) && 'true' || '' }}
     outputs:
-      tag: ${{ steps.v.outputs.tag }}
+      # «beta» o «release». No se pasa la etiqueta en sí: contiene «tansu», que coincide con un secret
+      # (el alias de la clave) y GitHub descarta las salidas que contienen secrets.
+      channel: ${{ steps.v.outputs.channel }}
       version: ${{ steps.v.outputs.version }}
       signed: ${{ steps.key.outputs.signed }}
     steps:
@@ -68,7 +70,7 @@ jobs:
           else
             echo "version=$v" >> "$GITHUB_OUTPUT"; echo "file=tansu" >> "$GITHUB_OUTPUT"
           fi
-          if [ "$TANSU_BETA" = "1" ]; then echo "tag=tansu-beta" >> "$GITHUB_OUTPUT"; elif [ "$RELEASE" = "true" ]; then echo "tag=v$v" >> "$GITHUB_OUTPUT"; fi
+          if [ "$TANSU_BETA" = "1" ]; then echo "tag=tansu-beta" >> "$GITHUB_OUTPUT"; echo "channel=beta" >> "$GITHUB_OUTPUT"; elif [ "$RELEASE" = "true" ]; then echo "tag=v$v" >> "$GITHUB_OUTPUT"; echo "channel=release" >> "$GITHUB_OUTPUT"; fi
 
       - name: Comprobar que la etiqueta coincide con la versión
         if: startsWith(github.ref, 'refs/tags/v')
@@ -174,7 +176,7 @@ jobs:
 
   publish:
     needs: [build, android-smoke]
-    if: needs.build.outputs.tag != '' && needs.build.outputs.signed == 'true'
+    if: needs.build.outputs.channel != '' && needs.build.outputs.signed == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -186,7 +188,7 @@ jobs:
       - name: Release de GitHub
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.build.outputs.tag }}
+          TAG: ${{ needs.build.outputs.channel == 'beta' && 'tansu-beta' || format('v{0}', needs.build.outputs.version) }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           ls -la dist
