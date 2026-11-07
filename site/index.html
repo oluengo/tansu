@@ -89,6 +89,14 @@ code { font: .86em var(--mono); background: var(--accent-bg); padding: .1rem .35
 footer { margin-top: 5rem; padding: 2rem 0 3rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
 footer .wrap { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; align-items: center; }
 footer a { color: var(--muted); }
+.donate { flex-basis: 100%; display: grid; gap: .6rem; margin-bottom: .6rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: .45rem; font: inherit; font-size: .88rem; font-weight: 600; text-decoration: none; color: var(--ink, var(--fg)); border: 1px solid; border-radius: 999px; padding: .3rem .85rem .3rem .35rem; cursor: pointer; transition: border-color .15s, background .15s; }
+.chip svg { width: 1.35rem; height: 1.35rem; flex: none; }
+.chip.btc { --c: #F7931A; } .chip.ln { --c: #7B3FE4; } .chip.nostr { --c: #8E30EB; }
+.chip { border-color: color-mix(in srgb, var(--c) 45%, transparent); background: color-mix(in srgb, var(--c) 8%, transparent); }
+.chip:hover { border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); text-decoration: none; }
+
 </style>
 </head>
 <body>
@@ -183,6 +191,15 @@ footer a { color: var(--muted); }
 
 <footer>
 	<div class="wrap">
+		<div class="donate">
+			<span data-i="f_support"></span>
+			<div class="chips">
+				<button class="chip btc" data-copy="bc1pnvdct6hfnh67p7dcg2e5mdveyz8jlxuzv4yflkxqccc72qkuc8ls8raspa" title="bc1pnvdct6hfnh67p7dcg2e5mdveyz8jlxuzv4yflkxqccc72qkuc8ls8raspa"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path fill="#fff" d="M22.6 14.1c.3-2.1-1.3-3.2-3.5-4l.7-2.8-1.7-.4-.7 2.7-1.4-.3.7-2.7-1.7-.4-.7 2.8-1.1-.3-2.4-.6-.5 1.8s1.3.3 1.2.3c.7.2.8.6.8 1l-.8 3.2.2.1-.2-.1-1.1 4.5c-.1.2-.3.5-.8.4 0 0-1.2-.3-1.2-.3l-.8 1.9 2.2.6 1.2.3-.7 2.8 1.7.4.7-2.8 1.4.4-.7 2.8 1.7.4.7-2.8c2.9.6 5.1.3 6-2.3.7-2.1 0-3.3-1.5-4.1 1.1-.3 1.9-1 2.2-2.5zm-3.8 5.4c-.5 2.1-4.1 1-5.2.7l.9-3.7c1.2.3 4.9.9 4.3 3zm.5-5.4c-.5 1.9-3.5.9-4.4.7l.8-3.3c1 .2 4.1.7 3.6 2.6z"/></svg>Bitcoin</button>
+				<button class="chip ln" data-copy="oluengo@rizful.com" title="oluengo@rizful.com"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#7B3FE4"/><path fill="#FFD43B" d="M18.2 5 9.5 18h5.6l-1.5 9 8.9-13.2h-5.7z"/></svg>Lightning</button>
+				<a class="chip nostr" href="https://njump.me/npub1vuf2g6s0mcjr34lhkg2vvtj4x65w29xn28nznw9fhcqcpyr4zc9q6myguj" title="npub1vuf2g6s0mcjr34lhkg2vvtj4x65w29xn28nznw9fhcqcpyr4zc9q6myguj"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#fff"/><path fill="#8E30EB" fill-rule="evenodd" d="M12 0a12 12 0 1 0 0 24a12 12 0 1 0 0-24ZM5.53 20.71C5.48 20.65 5.47 20.60 5.46 20.44C5.45 20.19 5.51 19.97 5.65 19.68C5.75 19.47 5.76 19.41 5.71 19.13C5.69 19.02 5.68 18.90 5.68 18.87C5.72 18.70 5.87 18.60 6.14 18.57C6.46 18.52 6.63 18.41 6.81 18.14C6.87 18.06 7.01 17.85 7.14 17.67C7.26 17.50 7.42 17.27 7.49 17.17C7.56 17.06 7.70 16.86 7.80 16.72C7.90 16.58 8.02 16.40 8.07 16.33C8.13 16.25 8.20 16.14 8.25 16.08C8.34 15.96 8.46 15.73 8.46 15.68C8.46 15.56 8.61 15.25 8.72 15.15C8.80 15.08 9.02 14.93 9.04 14.93C9.07 14.93 9.25 14.81 9.33 14.73C9.38 14.69 9.50 14.59 9.61 14.50C9.84 14.31 10.02 14.15 10.44 13.75C10.55 13.64 10.66 13.49 10.66 13.45C10.66 13.38 10.42 13.22 10.33 13.22C10.31 13.22 10.22 13.20 10.14 13.17C10.06 13.15 9.90 13.10 9.79 13.07C9.32 12.93 8.96 12.79 8.81 12.70C8.79 12.69 8.76 12.67 8.73 12.66C8.70 12.65 8.62 12.60 8.54 12.55C8.31 12.40 8.25 12.37 8.06 12.35C7.60 12.28 7.02 12.43 6.59 12.74C6.43 12.85 6.26 12.91 6.12 12.91C6.01 12.91 5.97 12.90 5.52 12.64C5.18 12.45 4.85 12.18 4.77 12.02C4.67 11.82 4.71 11.38 4.85 11.11C4.88 11.07 4.90 11.02 4.90 11.01C4.90 11 4.95 10.92 5.01 10.82C5.20 10.54 5.48 10.33 5.81 10.21C6 10.14 6.30 10.06 6.40 10.04C6.46 10.03 6.59 10.01 6.69 9.99C6.79 9.98 7.04 9.95 7.24 9.94C7.89 9.90 8.66 9.82 8.85 9.78C9.19 9.72 9.62 9.59 9.74 9.52C9.77 9.50 9.81 9.48 9.84 9.47C9.88 9.46 9.99 9.40 10.09 9.34C10.19 9.28 10.43 9.16 10.62 9.07C10.80 8.98 10.97 8.89 11 8.88C11.02 8.87 11.12 8.83 11.23 8.79C11.34 8.75 11.46 8.70 11.51 8.68C11.58 8.65 11.81 8.59 12.12 8.50C12.47 8.40 13.29 8.30 13.73 8.30C13.92 8.30 14.36 8.35 14.51 8.40C14.80 8.49 15.36 8.68 15.50 8.73C15.59 8.76 15.71 8.81 15.76 8.82C15.81 8.84 15.93 8.88 16.02 8.92C16.11 8.95 16.23 8.99 16.29 9.01C16.35 9.03 16.41 9.05 16.43 9.06C16.53 9.12 16.93 9.19 17.23 9.19C17.69 9.19 17.88 9.13 18.18 8.90C18.53 8.63 18.75 7.88 18.61 7.44C18.53 7.18 18.27 6.89 17.64 6.34C17.07 5.85 16.87 5.56 16.77 5.07C16.68 4.62 16.79 4.13 17.04 3.90C17.19 3.77 17.27 3.74 17.53 3.74C17.81 3.74 17.94 3.79 18.25 4.04C18.58 4.30 18.71 4.37 18.99 4.42C19.04 4.43 19.12 4.47 19.19 4.53C19.29 4.62 19.30 4.64 19.27 4.67C19.20 4.76 19.14 4.77 18.62 4.78C17.99 4.80 17.84 4.83 17.71 4.97C17.63 5.05 17.62 5.08 17.61 5.20C17.59 5.43 17.71 5.58 18.26 6.02C19.06 6.66 19.30 7.09 19.30 7.85C19.30 8.77 18.85 9.56 17.91 10.27C17.63 10.48 17.32 10.69 17.28 10.69C17.24 10.69 17.08 10.86 17.05 10.94C17.03 10.98 17.01 11.11 17 11.24C16.99 11.52 16.95 11.87 16.92 11.95C16.90 11.98 16.88 12.07 16.86 12.14C16.84 12.21 16.82 12.28 16.81 12.29C16.80 12.31 16.78 12.34 16.77 12.38C16.74 12.48 16.55 12.77 16.44 12.86C16.26 13.04 16.07 13.13 15.66 13.25C15.55 13.29 15.39 13.34 15.31 13.36C15.23 13.39 15.14 13.41 15.12 13.41C15.10 13.41 15.03 13.42 14.97 13.44C14.83 13.48 14.10 13.65 13.89 13.68C13.63 13.72 13.31 13.92 13.06 14.21C12.96 14.33 12.87 14.43 12.87 14.44C12.85 14.45 12.44 15 12.23 15.30C12.04 15.57 12.05 15.64 12.29 15.55C12.34 15.53 12.44 15.50 12.50 15.48C12.57 15.46 12.69 15.43 12.77 15.40C13.13 15.29 13.46 15.19 13.73 15.11C13.98 15.03 14.19 14.97 14.39 14.90C15.04 14.70 15.16 14.69 15.41 14.80C15.56 14.87 15.57 14.88 15.94 15.45C16.42 16.17 16.44 16.22 16.33 16.33C16.23 16.42 16.11 16.39 15.84 16.20C15.74 16.14 15.70 16.13 15.53 16.12C15.22 16.10 15.06 15.98 15.01 15.76C14.98 15.61 14.84 15.54 14.67 15.61C14.64 15.62 14.52 15.66 14.40 15.69C14.29 15.73 14.15 15.77 14.10 15.78C14.05 15.80 13.91 15.84 13.79 15.88C13.68 15.91 13.54 15.96 13.49 15.97C13.44 15.99 13.30 16.03 13.18 16.07C13.07 16.10 12.94 16.14 12.89 16.16C12.85 16.18 12.71 16.22 12.60 16.25C12.33 16.33 12.11 16.41 12.08 16.43C12.07 16.44 11.96 16.50 11.84 16.56C11.49 16.73 11.27 16.70 11.12 16.44C11.06 16.34 11.06 16.32 11.07 16.11C11.08 15.93 11.10 15.84 11.15 15.73C11.28 15.41 11.62 14.80 11.90 14.37C12.03 14.18 12.07 14.10 12.05 14.08C12.03 14.05 11.95 14.06 11.89 14.10C11.85 14.12 11.76 14.16 11.67 14.19C11.18 14.39 11.19 14.38 10.33 15.06C9.91 15.40 9.86 15.45 9.80 15.62C9.72 15.82 9.58 15.98 9.39 16.08C9.29 16.12 9.19 16.19 9.14 16.22C9.07 16.27 8.82 16.58 8.61 16.86C8.56 16.93 8.48 17.05 8.43 17.12C8.37 17.19 8.29 17.31 8.24 17.38C8.19 17.45 8.10 17.57 8.05 17.64C8 17.71 7.92 17.82 7.87 17.89C7.82 17.96 7.71 18.11 7.62 18.22C7.53 18.34 7.39 18.54 7.29 18.68C6.93 19.16 6.65 19.54 6.51 19.70C6.44 19.79 6.29 19.96 6.19 20.08C6.09 20.20 5.96 20.39 5.91 20.50C5.76 20.80 5.63 20.86 5.53 20.71Z"/></svg>Nostr</a>
+				<span id="copied" role="status"></span>
+			</div>
+		</div>
 		<span>Tansu · MIT</span>
 		<a href="https://github.com/oluengo/tansu">GitHub</a>
 		<a href="https://oluengo.github.io/" data-i="f_more"></a>
@@ -199,7 +216,7 @@ const I = {
 	hero_text: { en: "Tansu is a file explorer for what your Nostr apps keep in your account: Wavestr favourites, Usus backups, settings and your lists. See it, edit it, move it between accounts. Always encrypted.", es: "Tansu es un explorador de archivos para lo que tus apps de Nostr guardan en tu cuenta: favoritos de Wavestr, copias de Usus, ajustes y tus listas. Míralo, edítalo y pásalo entre cuentas. Siempre cifrado.", ca: "Tansu és un explorador de fitxers per al que les teves apps de Nostr desen al teu compte: preferits de Wavestr, còpies d'Usus, ajustos i les teves llistes. Mira-ho, edita-ho i passa-ho entre comptes. Sempre xifrat." },
 	open_web: { en: "Open in the browser", es: "Abrir en el navegador", ca: "Obre al navegador" },
 	get_android: { en: "Android app", es: "App para Android", ca: "App per a Android" },
-	hero_note: { en: "Free and open source · Android and web · Català, Español, English", es: "Libre y de código abierto · Android y web · Català, Español, English", ca: "Lliure i de codi obert · Android i web · Català, Español, English" },
+	hero_note: { en: "Built on Nostr · Free and open source · Android and web · Català, Español, English", es: "Hecha sobre Nostr · Libre y de código abierto · Android y web · Català, Español, English", ca: "Feta sobre Nostr · Lliure i de codi obert · Android i web · Català, Español, English" },
 	m_apps: { en: "App data", es: "Datos de apps", ca: "Dades d'apps" },
 	m_wavestr: { en: "2 items · 5 min ago", es: "2 elementos · hace 5 min", ca: "2 elements · fa 5 min" },
 	m_usus: { en: "1 item · today", es: "1 elemento · hoy", ca: "1 element · avui" },
@@ -239,13 +256,16 @@ const I = {
 	h2: { en: "Open an app's folder and decrypt what you want to see.", es: "Abre la carpeta de una app y descifra lo que quieras ver.", ca: "Obre la carpeta d'una app i desxifra el que vulguis veure." },
 	h3: { en: "Edit, export, copy to another account or delete. Your signer approves every change.", es: "Edita, exporta, copia a otra cuenta o borra. Tu firmante aprueba cada cambio.", ca: "Edita, exporta, copia a un altre compte o esborra. El teu signant aprova cada canvi." },
 	f_more: { en: "More apps", es: "Más apps", ca: "Més apps" },
+	f_support: { en: "Support the project · tap to copy", es: "Apoya el proyecto · toca para copiar", ca: "Dona suport al projecte · toca per copiar" },
+	f_copied: { en: "copied", es: "copiado", ca: "copiat" },
 	f_ai: { en: "Made with AI · tested by humans", es: "Hecha con IA · probada por humanos", ca: "Feta amb IA · provada per humans" },
 	f_credit: { en: "Nostr icon: <a href=\"https://github.com/SovrynMatt/Nostr-Website-Button-Design\">Purple Nostrich by SovrynMatt</a>", es: "Icono de Nostr: <a href=\"https://github.com/SovrynMatt/Nostr-Website-Button-Design\">Purple Nostrich de SovrynMatt</a>", ca: "Icona de Nostr: <a href=\"https://github.com/SovrynMatt/Nostr-Website-Button-Design\">Purple Nostrich de SovrynMatt</a>" },
 };
 const LANGS = ["ca", "es", "en"];
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 function pick() {
-	const s = store.get("tansu.site.lang"); if (LANGS.includes(s)) return s;
+	const q = new URLSearchParams(location.search).get("lang"); if (LANGS.includes(q)) return q;
+	const s = store.get("lang"); if (LANGS.includes(s)) return s;
 	for (const l of navigator.languages || [navigator.language || "en"]) { const b = String(l).slice(0, 2).toLowerCase(); if (LANGS.includes(b)) return b; }
 	return "en";
 }
@@ -254,14 +274,22 @@ function apply(lang) {
 	document.querySelectorAll("[data-i]").forEach(el => { const v = I[el.dataset.i]?.[lang]; if (v == null) return; if ("html" in el.dataset) el.innerHTML = v; else el.textContent = v; });
 	document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
 }
-document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => { store.set("tansu.site.lang", b.dataset.lang); apply(b.dataset.lang); });
-const t = store.get("tansu.site.theme"); if (t) document.documentElement.dataset.theme = t;
+document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => { store.set("lang", b.dataset.lang); apply(b.dataset.lang); });
+const t = store.get("theme"); if (t) document.documentElement.dataset.theme = t;
 document.getElementById("theme").onclick = () => {
 	const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-	const n = dark ? "light" : "dark"; document.documentElement.dataset.theme = n; store.set("tansu.site.theme", n);
+	const n = dark ? "light" : "dark"; document.documentElement.dataset.theme = n; store.set("theme", n);
 };
 if (!t && matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";
 apply(pick());
+const copied = document.getElementById("copied"); let copiedT;
+document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
+	let ok = false;
+	try { await navigator.clipboard.writeText(b.dataset.copy); ok = true; } catch (e) {}
+	const lang = document.documentElement.lang || "en";
+	copied.textContent = ok ? b.textContent.trim() + " " + (I.f_copied[lang] || I.f_copied.en) : b.dataset.copy;
+	clearTimeout(copiedT); copiedT = setTimeout(() => { copied.textContent = ""; }, ok ? 1800 : 8000);
+}));
 </script>
 </body>
 </html>
