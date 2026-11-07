@@ -1,0 +1,13 @@
+{
+  "name": "tansu-web-lib",
+  "private": true,
+  "description": "Empaqueta nostr-tools para Tansu web (../nostr.js).",
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild entry.mjs --bundle --minify --format=iife --global-name=TansuNostr --target=es2020 --legal-comments=eof --outfile=../nostr.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "nostr-tools": "2.25.2"
+  }
+}

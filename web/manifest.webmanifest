@@ -1,0 +1,16 @@
+{
+  "name": "Tansu",
+  "short_name": "Tansu",
+  "description": "File explorer for the private data your Nostr apps keep (NIP-78, NIP-51). Only ever publishes encrypted. · Explorador de tus datos privados de Nostr · Explorador de les teves dades privades de Nostr",
+  "id": "/tansu/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F7F4",
+  "theme_color": "#F7F7F4",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

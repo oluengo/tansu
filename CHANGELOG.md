@@ -3,6 +3,7 @@
 ## 0.2.0 (beta)
 
 - Editar listas NIP-51: añadir y editar elementos privados (cifrados con NIP-44), quitar públicos o hacerlos privados. Nunca se añade nada público; la versión anterior queda en la papelera.
+- Versión web con PWA opcional: Amber (Android), extensión NIP-07, bunker o npub; las mismas funciones que la app.
 - Firma propia de Tansu (huella en Ajustes → Acerca de y en el README).
 
 ## 0.1.0 (beta)

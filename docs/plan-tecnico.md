@@ -12,7 +12,8 @@ Explorador tipo gestor de archivos para los datos privados que las apps de Nostr
 | Icono | Carpeta índigo con el Purple Nostrich de SovrynMatt (créditos en Acerca de y CREDITS.md) |
 | Privacidad | Solo publica datos cifrados con NIP-44 para la propia cuenta (ADR 0001) |
 | Cuentas | Varias: Amber, bunker, npub (ADR 0002) |
-| Plataforma | Android nativo: Kotlin, Compose, Material 3. minSdk 26 |
+| Plataforma | Android nativo (Kotlin, Compose, Material 3, minSdk 26) y web con PWA opcional (JavaScript sin compilación + nostr-tools) |
+| Web: cuentas | Amber por enlace NIP-55 (cada paso vuelve a la página y la operación se retoma), extensión NIP-07, bunker, npub |
 | Base | Cliente Nostr, cripto y estilos de Wavestr |
 | Idiomas | ca/es/en, por defecto el del dispositivo o inglés |
 | Distribución | GitHub Releases + Obtainium + Zapstore. Rama `beta` → «Tansu Beta» |

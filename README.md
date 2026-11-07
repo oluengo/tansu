@@ -2,7 +2,7 @@
 
 # Tansu
 
-Explorador de los datos que tus apps de Nostr guardan en tu cuenta: copias de seguridad y ajustes (NIP-78) y listas (NIP-51). Para Android, con varias cuentas a la vez.
+Explorador de los datos que tus apps de Nostr guardan en tu cuenta: copias de seguridad y ajustes (NIP-78) y listas (NIP-51). Para Android y web, con varias cuentas a la vez.
 *A file explorer for the data your Nostr apps keep in your account. Català · Español · English.*
 
 > Estado: **beta** ([Tansu Beta](https://github.com/oluengo/tansu/releases/tag/tansu-beta)).
@@ -22,6 +22,10 @@ Explorador de los datos que tus apps de Nostr guardan en tu cuenta: copias de se
 - **Papelera local**: antes de borrar o sobrescribir se guarda una copia (cifrada) para poder restaurarla.
 - **Listas NIP-51**: ver (también la parte privada) y editar. Lo nuevo siempre va a la parte privada, cifrada; lo público solo se puede quitar o hacer privado.
 - Tema claro/oscuro/auto, color de acento, tres idiomas y relays editables.
+
+## Web
+
+También en el navegador, con PWA opcional: **[oluengo.github.io/tansu](https://oluengo.github.io/tansu/)** (beta en [/tansu/beta](https://oluengo.github.io/tansu/beta/)). Entra con Amber (Android), una extensión NIP-07, un bunker o una npub. Más en [`web/`](web/README.md).
 
 ## Instalar la beta
 

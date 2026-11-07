@@ -1,0 +1,76 @@
+# Tansu web en GitHub Pages:
+# - rama main → https://oluengo.github.io/tansu/
+# - rama beta → https://oluengo.github.io/tansu/beta/ (versión de pruebas, con sus datos aparte)
+# El entorno github-pages solo admite publicar desde main: un push a beta relanza este flujo sobre main,
+# que monta las dos ramas (main en la raíz y beta en /beta/).
+name: Web
+
+on:
+  push:
+    branches: [main, beta]
+    paths: ["web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  relanzar:
+    if: github.ref == 'refs/heads/beta'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publicar desde main (incluye la beta)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/heads/main
+          path: main
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/heads/beta
+          path: beta
+        continue-on-error: true
+
+      - name: Montar el sitio
+        run: |
+          WEB="index.html app.js app.css i18n.js nostr.js sw.js manifest.webmanifest icon.svg icon-192.png icon-512.png icon-maskable-512.png favicon-48.png"
+          mkdir -p _site
+          for f in $WEB; do cp "main/web/$f" _site/; done
+          touch _site/.nojekyll
+          if [ -f beta/web/index.html ]; then
+            mkdir -p _site/beta
+            for f in $WEB; do cp "beta/web/$f" _site/beta/; done
+            # Caché propia de la beta y nombre propio al instalarla
+            sed -i 's/const CACHE = "tansu-/const CACHE = "tansu-beta-/' _site/beta/sw.js
+            node -e 'const f="_site/beta/manifest.webmanifest",fs=require("fs"),m=JSON.parse(fs.readFileSync(f,"utf8"));m.name="Tansu Beta";m.short_name="Tansu β";m.id="/tansu/beta/";fs.writeFileSync(f,JSON.stringify(m,null,2))'
+          fi
+          ls -la _site _site/beta 2>/dev/null
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4
