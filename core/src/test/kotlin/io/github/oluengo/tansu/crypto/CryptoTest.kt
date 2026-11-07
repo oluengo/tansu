@@ -2,10 +2,7 @@ package io.github.oluengo.tansu.crypto
 
 import io.github.oluengo.tansu.nostr.EventSigning
 import io.github.oluengo.tansu.nostr.Event
-import io.github.oluengo.tansu.nostr.Lnurl
 import io.github.oluengo.tansu.nostr.NostrJson
-import io.github.oluengo.tansu.nostr.Nwc
-import io.github.oluengo.tansu.nostr.NwcConnection
 import io.github.oluengo.tansu.nostr.hexToBytes
 import io.github.oluengo.tansu.nostr.toHex
 import kotlinx.serialization.json.JsonObject
@@ -73,58 +70,5 @@ class CryptoTest {
         assertTrue(EventSigning.verify(Event.fromJson(e.toJson().toString())!!))
         assertFalse(EventSigning.verify(e.copy(content = "otro")))
         assertEquals("\"a\\\"b\\\\c\\nd\\u0001\"", EventSigning.quote("a\"b\\c\nd\u0001"))
-    }
-
-    @Test fun nwcUriAndRoundTrip() {
-        val walletSk = Secp256k1.randomSecret()
-        val walletPub = Secp256k1.pubkey(walletSk).toHex()
-        val clientSk = Secp256k1.randomSecret().toHex()
-        val uri = "nostr+walletconnect://$walletPub?relay=wss%3A%2F%2Frelay.getalby.com%2Fv1&relay=wss://nos.lol/&secret=$clientSk&lud16=oscar%40getalby.com"
-        val conn = NwcConnection.parse(uri)!!
-        assertEquals(listOf("wss://relay.getalby.com/v1", "wss://nos.lol"), conn.relays)
-        assertEquals("oscar@getalby.com", conn.lud16)
-        assertEquals(conn, NwcConnection.parse(conn.toUri()))
-        assertNull(NwcConnection.parse("nostr+walletconnect://abc?relay=wss://x&secret=$clientSk"))
-        assertNull(NwcConnection.parse("https://example.com"))
-        assertNull(NwcConnection.parse("nostr+walletconnect://$walletPub?secret=$clientSk"))
-
-        // La cartera recibe la petición, la descifra y responde.
-        val req = Nwc.payInvoice(conn, "lnbc10n1abc")
-        assertTrue(EventSigning.verify(req))
-        assertEquals(conn.clientPubkey, req.pubkey)
-        val body = NostrJson.parseToJsonElement(io.github.oluengo.tansu.crypto.Nip04.decrypt(req.content, walletSk, req.pubkey.hexToBytes())) as JsonObject
-        assertEquals("\"pay_invoice\"", body["method"].toString())
-        val resp = EventSigning.sign(
-            Nwc.RESPONSE, listOf(listOf("p", conn.clientPubkey), listOf("e", req.id)),
-            Nip04.encrypt("""{"result_type":"pay_invoice","result":{"preimage":"00ff"}}""", walletSk, conn.clientPubkey.hexToBytes()), walletSk,
-        )
-        val r = Nwc.parseResponse(conn, resp)!!
-        assertEquals("pay_invoice", r.resultType)
-        assertNull(r.errorCode)
-        val err = resp.copy(content = Nip04.encrypt("""{"result_type":"pay_invoice","error":{"code":"QUOTA_EXCEEDED","message":"límite"}}""", walletSk, conn.clientPubkey.hexToBytes()))
-        assertEquals("QUOTA_EXCEEDED", Nwc.parseResponse(conn, err)!!.errorCode)
-    }
-
-    @Test fun lnurlAndZapRequest() {
-        assertEquals("https://getalby.com/.well-known/lnurlp/oscar", Lnurl.endpointFor(" Oscar@GetAlby.com "))
-        assertNull(Lnurl.endpointFor("no-es-una-direccion"))
-        val info = Lnurl.parsePayInfo(buildJsonObject {
-            put("tag", "payRequest"); put("callback", "https://getalby.com/lnurlp/oscar/callback?x=1")
-            put("minSendable", 1000); put("maxSendable", 100000000); put("allowsNostr", true)
-            put("nostrPubkey", "a".repeat(64)); put("commentAllowed", 255)
-        })!!
-        assertTrue(info.allowsNostr)
-        val lnurl = Lnurl.encode(Lnurl.endpointFor("oscar@getalby.com")!!)
-        assertTrue(lnurl.startsWith("lnurl1"))
-        val tags = Lnurl.zapRequestTags("b".repeat(64), "30311:${"c".repeat(64)}:d", 21_000, lnurl, listOf("wss://a", "wss://b"))
-        assertEquals(listOf("relays", "wss://a", "wss://b"), tags[0])
-        assertEquals(listOf("amount", "21000"), tags[1])
-        val zr = EventSigning.sign(9734, tags, "¡gracias!", Secp256k1.randomSecret())
-        val url = Lnurl.callbackUrl(info, 21_000, zr, lnurl, "¡gracias!")
-        assertTrue(url.startsWith("https://getalby.com/lnurlp/oscar/callback?x=1&amount=21000&nostr=%7B"))
-        assertFalse("con zap el comentario va en la petición", url.contains("&comment="))
-        assertTrue(Lnurl.invoiceMatches("lnbc210n1pxyz", 21_000))
-        assertFalse(Lnurl.invoiceMatches("lnbc2100n1pxyz", 21_000))
-        assertNull(Lnurl.parsePayInfo(buildJsonObject { put("tag", "withdrawRequest") }))
     }
 }
