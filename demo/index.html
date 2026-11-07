@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tansu · demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f7f4; --card:#fff; --ink:#1e2230; --muted:#6b7080; --line:#e7e6e1;
+  --accent:#3d4fa8; --accent-soft:#eceffa; --wood:#b07a4a; --ok:#2e8a5a; --warn:#b5651d; --danger:#c0392b;
+  --r:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.wrap{max-width:760px;margin:0 auto;padding:12px 14px 120px}
+.switch{display:flex;gap:6px;background:#ecebe6;border-radius:999px;padding:4px;margin:4px 0 14px}
+.switch button{flex:1;padding:8px 10px;border-radius:999px;font-weight:600;font-size:14px;color:var(--muted)}
+.switch button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+/* app chrome */
+.app{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 2px 12px rgba(20,20,40,.05)}
+.top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.top .logo{width:32px;height:32px;flex:none}
+.top h1{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+.top .sp{flex:1}
+.acct{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:500;max-width:52%}
+.acct span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;flex:none}
+.search{display:flex;align-items:center;gap:8px;margin:10px 14px 4px;padding:9px 12px;background:var(--bg);border-radius:12px}
+.search input{border:0;background:none;outline:0;font:inherit;flex:1;min-width:0}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:8px 14px 4px;font-size:13px;color:var(--muted)}
+.crumbs button{padding:2px 6px;border-radius:6px}
+.crumbs button:hover{background:var(--bg)}
+.crumbs .cur{color:var(--ink);font-weight:600}
+.list{padding:4px 6px 10px}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 10px;border-radius:12px}
+.row:hover{background:var(--bg)}
+.ico{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--accent-soft);color:var(--accent)}
+.ico.f{background:#f5ecdf;color:var(--wood)}
+.ico svg{width:20px;height:20px}
+.row .t{flex:1;min-width:0}
+.row .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .m{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{color:#b5b5b0}
+.badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.badge.lock{background:#fff4e6;color:var(--warn)}
+.badge.dirty{background:#fdecea;color:var(--danger)}
+.sec{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:14px 12px 4px}
+/* detail */
+.det{padding:6px 14px 16px}
+.det h2{margin:6px 0 2px;font-size:20px;letter-spacing:-.01em}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.box{border:1px solid var(--line);border-radius:var(--r);margin:10px 0;overflow:hidden}
+.box .hd{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fbfbf9;border-bottom:1px solid var(--line);font-weight:600;font-size:14px}
+.box .hd .sp{flex:1}
+.it{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line)}
+.it:first-of-type{border-top:0}
+.tag{font:600 11px/1 ui-monospace,Menlo,monospace;padding:4px 6px;border-radius:6px;background:var(--accent-soft);color:var(--accent);flex:none;min-width:34px;text-align:center}
+.it .v{flex:1;min-width:0;font-size:14px}
+.it .v small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .v div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dots{padding:4px 8px;border-radius:8px;color:var(--muted)}
+.dots:hover{background:var(--bg)}
+.locked{padding:18px 12px;text-align:center;color:var(--muted);font-size:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:11px;font-weight:600;font-size:14px;background:var(--bg)}
+.btn.p{background:var(--accent);color:#fff}
+.btn.d{color:var(--danger)}
+.btn.s{padding:6px 10px;font-size:13px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+pre,textarea{font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;margin:0;padding:12px;white-space:pre-wrap;word-break:break-word}
+textarea{width:100%;min-height:260px;border:0;outline:0;resize:vertical;background:#fcfcfb}
+.err{color:var(--danger);font-size:13px;padding:6px 12px}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+/* bottom bar & sheets */
+.bar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;width:min(732px,calc(100% - 28px));background:var(--ink);color:#fff;border-radius:16px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:5}
+.bar .sp{flex:1;font-size:14px}
+.bar .btn{background:#fff;color:var(--ink)}
+.bar .btn.g{background:transparent;color:#cfd2dc}
+.shade{position:fixed;inset:0;background:rgba(20,20,30,.35);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:#fff;width:min(760px,100%);border-radius:20px 20px 0 0;padding:16px 16px 26px;max-height:85vh;overflow:auto}
+.sheet h3{margin:2px 0 10px;font-size:17px}
+.sheet .row{padding:12px 8px}
+.field{display:block;margin:10px 0}
+.field span{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.field input,.field select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.spin{width:16px;height:16px;border:2px solid #ccd;border-top-color:var(--accent);border-radius:50%;animation:s .8s linear infinite;display:inline-block;vertical-align:-3px}
+@keyframes s{to{transform:rotate(360deg)}}
+/* name & icon page */
+.page h2{font-size:18px;margin:18px 0 8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:10px 0}
+.cand{display:flex;gap:14px;align-items:flex-start}
+.cand .k{font:500 26px/1 "Noto Sans JP",sans-serif;color:var(--wood);width:64px;flex:none;text-align:center;padding-top:4px}
+.cand h4{margin:0 0 2px;font-size:16px}
+.cand p{margin:2px 0;color:var(--muted);font-size:14px}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;margin-top:6px}
+.pill.g{background:#e7f5ee;color:var(--ok)} .pill.y{background:#fff4e6;color:var(--warn)} .pill.r{background:#fdecea;color:var(--danger)}
+.icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.icons .card{text-align:center;margin:0;cursor:pointer;border-width:2px}
+.icons .card.on{border-color:var(--accent)}
+.icons svg{width:96px;height:96px}
+.icons b{display:block;margin-top:8px}
+.icons small{color:var(--muted)}
+.note{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="demo"></div>
+</div>
+<div id="bar"></div>
+<div id="layer"></div>
+
+<script>
+/* ---------- icons ---------- */
+const I={
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>',
+  code:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M10 12l-2 2 2 2M14 12l2 2-2 2"/></svg>',
+  search:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8d99" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  chev:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>',
+};
+const LOGO=()=>`<svg viewBox="0 0 108 108"><rect width="108" height="108" rx="24" fill="#F4F1EA"/><path fill="#3D4FA8" d="M24,40a6,6 0 0 1 6,-6h14l6,6h28a6,6 0 0 1 6,6v28a6,6 0 0 1 -6,6h-48a6,6 0 0 1 -6,-6z"/><g transform="translate(39 44) scale(1.25)"><path fill="#fff" fill-rule="evenodd" d="M12 0a12 12 0 1 0 0 24a12 12 0 1 0 0-24ZM5.53 20.71C5.48 20.65 5.47 20.60 5.46 20.44C5.45 20.19 5.51 19.97 5.65 19.68C5.75 19.47 5.76 19.41 5.71 19.13C5.69 19.02 5.68 18.90 5.68 18.87C5.72 18.70 5.87 18.60 6.14 18.57C6.46 18.52 6.63 18.41 6.81 18.14C6.87 18.06 7.01 17.85 7.14 17.67C7.26 17.50 7.42 17.27 7.49 17.17C7.56 17.06 7.70 16.86 7.80 16.72C7.90 16.58 8.02 16.40 8.07 16.33C8.13 16.25 8.20 16.14 8.25 16.08C8.34 15.96 8.46 15.73 8.46 15.68C8.46 15.56 8.61 15.25 8.72 15.15C8.80 15.08 9.02 14.93 9.04 14.93C9.07 14.93 9.25 14.81 9.33 14.73C9.38 14.69 9.50 14.59 9.61 14.50C9.84 14.31 10.02 14.15 10.44 13.75C10.55 13.64 10.66 13.49 10.66 13.45C10.66 13.38 10.42 13.22 10.33 13.22C10.31 13.22 10.22 13.20 10.14 13.17C10.06 13.15 9.90 13.10 9.79 13.07C9.32 12.93 8.96 12.79 8.81 12.70C8.79 12.69 8.76 12.67 8.73 12.66C8.70 12.65 8.62 12.60 8.54 12.55C8.31 12.40 8.25 12.37 8.06 12.35C7.60 12.28 7.02 12.43 6.59 12.74C6.43 12.85 6.26 12.91 6.12 12.91C6.01 12.91 5.97 12.90 5.52 12.64C5.18 12.45 4.85 12.18 4.77 12.02C4.67 11.82 4.71 11.38 4.85 11.11C4.88 11.07 4.90 11.02 4.90 11.01C4.90 11 4.95 10.92 5.01 10.82C5.20 10.54 5.48 10.33 5.81 10.21C6 10.14 6.30 10.06 6.40 10.04C6.46 10.03 6.59 10.01 6.69 9.99C6.79 9.98 7.04 9.95 7.24 9.94C7.89 9.90 8.66 9.82 8.85 9.78C9.19 9.72 9.62 9.59 9.74 9.52C9.77 9.50 9.81 9.48 9.84 9.47C9.88 9.46 9.99 9.40 10.09 9.34C10.19 9.28 10.43 9.16 10.62 9.07C10.80 8.98 10.97 8.89 11 8.88C11.02 8.87 11.12 8.83 11.23 8.79C11.34 8.75 11.46 8.70 11.51 8.68C11.58 8.65 11.81 8.59 12.12 8.50C12.47 8.40 13.29 8.30 13.73 8.30C13.92 8.30 14.36 8.35 14.51 8.40C14.80 8.49 15.36 8.68 15.50 8.73C15.59 8.76 15.71 8.81 15.76 8.82C15.81 8.84 15.93 8.88 16.02 8.92C16.11 8.95 16.23 8.99 16.29 9.01C16.35 9.03 16.41 9.05 16.43 9.06C16.53 9.12 16.93 9.19 17.23 9.19C17.69 9.19 17.88 9.13 18.18 8.90C18.53 8.63 18.75 7.88 18.61 7.44C18.53 7.18 18.27 6.89 17.64 6.34C17.07 5.85 16.87 5.56 16.77 5.07C16.68 4.62 16.79 4.13 17.04 3.90C17.19 3.77 17.27 3.74 17.53 3.74C17.81 3.74 17.94 3.79 18.25 4.04C18.58 4.30 18.71 4.37 18.99 4.42C19.04 4.43 19.12 4.47 19.19 4.53C19.29 4.62 19.30 4.64 19.27 4.67C19.20 4.76 19.14 4.77 18.62 4.78C17.99 4.80 17.84 4.83 17.71 4.97C17.63 5.05 17.62 5.08 17.61 5.20C17.59 5.43 17.71 5.58 18.26 6.02C19.06 6.66 19.30 7.09 19.30 7.85C19.30 8.77 18.85 9.56 17.91 10.27C17.63 10.48 17.32 10.69 17.28 10.69C17.24 10.69 17.08 10.86 17.05 10.94C17.03 10.98 17.01 11.11 17 11.24C16.99 11.52 16.95 11.87 16.92 11.95C16.90 11.98 16.88 12.07 16.86 12.14C16.84 12.21 16.82 12.28 16.81 12.29C16.80 12.31 16.78 12.34 16.77 12.38C16.74 12.48 16.55 12.77 16.44 12.86C16.26 13.04 16.07 13.13 15.66 13.25C15.55 13.29 15.39 13.34 15.31 13.36C15.23 13.39 15.14 13.41 15.12 13.41C15.10 13.41 15.03 13.42 14.97 13.44C14.83 13.48 14.10 13.65 13.89 13.68C13.63 13.72 13.31 13.92 13.06 14.21C12.96 14.33 12.87 14.43 12.87 14.44C12.85 14.45 12.44 15 12.23 15.30C12.04 15.57 12.05 15.64 12.29 15.55C12.34 15.53 12.44 15.50 12.50 15.48C12.57 15.46 12.69 15.43 12.77 15.40C13.13 15.29 13.46 15.19 13.73 15.11C13.98 15.03 14.19 14.97 14.39 14.90C15.04 14.70 15.16 14.69 15.41 14.80C15.56 14.87 15.57 14.88 15.94 15.45C16.42 16.17 16.44 16.22 16.33 16.33C16.23 16.42 16.11 16.39 15.84 16.20C15.74 16.14 15.70 16.13 15.53 16.12C15.22 16.10 15.06 15.98 15.01 15.76C14.98 15.61 14.84 15.54 14.67 15.61C14.64 15.62 14.52 15.66 14.40 15.69C14.29 15.73 14.15 15.77 14.10 15.78C14.05 15.80 13.91 15.84 13.79 15.88C13.68 15.91 13.54 15.96 13.49 15.97C13.44 15.99 13.30 16.03 13.18 16.07C13.07 16.10 12.94 16.14 12.89 16.16C12.85 16.18 12.71 16.22 12.60 16.25C12.33 16.33 12.11 16.41 12.08 16.43C12.07 16.44 11.96 16.50 11.84 16.56C11.49 16.73 11.27 16.70 11.12 16.44C11.06 16.34 11.06 16.32 11.07 16.11C11.08 15.93 11.10 15.84 11.15 15.73C11.28 15.41 11.62 14.80 11.90 14.37C12.03 14.18 12.07 14.10 12.05 14.08C12.03 14.05 11.95 14.06 11.89 14.10C11.85 14.12 11.76 14.16 11.67 14.19C11.18 14.39 11.19 14.38 10.33 15.06C9.91 15.40 9.86 15.45 9.80 15.62C9.72 15.82 9.58 15.98 9.39 16.08C9.29 16.12 9.19 16.19 9.14 16.22C9.07 16.27 8.82 16.58 8.61 16.86C8.56 16.93 8.48 17.05 8.43 17.12C8.37 17.19 8.29 17.31 8.24 17.38C8.19 17.45 8.10 17.57 8.05 17.64C8 17.71 7.92 17.82 7.87 17.89C7.82 17.96 7.71 18.11 7.62 18.22C7.53 18.34 7.39 18.54 7.29 18.68C6.93 19.16 6.65 19.54 6.51 19.70C6.44 19.79 6.29 19.96 6.19 20.08C6.09 20.20 5.96 20.39 5.91 20.50C5.76 20.80 5.63 20.86 5.53 20.71Z"/></g></svg>`;
+
+/* ---------- demo data ---------- */
+const now=Date.now(), d=(h)=>now-h*3600e3;
+const KINDS={10000:'Silenciados',10001:'Fijados',10002:'Relays (NIP-65)',10003:'Marcadores',10006:'Relays bloqueados',10007:'Relays de búsqueda',10015:'Intereses',10030:'Emojis',10050:'Relays de MD',10063:'Servidores Blossom',30000:'Grupo de seguidos',30002:'Conjunto de relays',30003:'Carpeta de marcadores',30004:'Curación',30015:'Conjunto de intereses',30078:'Datos de app'};
+const APPS={wavestr:{name:'Wavestr',color:'#7b4fd6'},usus:{name:'Usus',color:'#2e8a5a'},mado:{name:'Mado',color:'#b5651d'}};
+let uid=1; const ev=o=>Object.assign({id:'ev'+(uid++),relays:4,dirty:false,unlocked:false},o);
+const accounts=[
+ {id:'a1',name:'Oscar',handle:'oscar@oluengo.github.io',npub:'npub1osc…8k2q',color:'#3d4fa8',signer:'Amber (NIP-55)',events:[
+  ev({kind:10002,cat:'list',updated:d(30),pub:[['r','wss://relay.damus.io'],['r','wss://nos.lol'],['r','wss://relay.primal.net','read'],['r','wss://nostr.wine','write']]}),
+  ev({kind:10000,cat:'list',updated:d(400),enc:'NIP-44',pub:[['t','spam']],priv:[['p','npub1spam…x9','Cuenta spam'],['word','airdrop'],['p','npub1bot…77','Bot repetido']]}),
+  ev({kind:10003,cat:'list',updated:d(70),pub:[['e','note1q8…a2','Hilo sobre NIP-78'],['a','30023:npub1…:guia-amber','Guía de Amber']],enc:'NIP-44',priv:[['e','note1x3…kk','Receta de ramen']]}),
+  ev({kind:10015,cat:'list',updated:d(900),pub:[['t','nostr'],['t','bitcoin'],['t','japonés'],['t','calistenia']]}),
+  ev({kind:10063,cat:'list',updated:d(200),pub:[['server','https://blossom.primal.net'],['server','https://cdn.satellite.earth']]}),
+  ev({kind:30000,cat:'set',d:'devs',title:'Devs Android',updated:d(120),pub:[['p','npub1vit…','Vitor'],['p','npub1gre…','greenart7c3']]}),
+  ev({kind:30003,cat:'set',d:'lecturas',title:'Para leer',updated:d(50),enc:'NIP-44',pub:[],priv:[['a','30023:npub1…:outbox','Modelo outbox explicado'],['r','https://nips.nostr.com/51','NIP-51']]}),
+  ev({kind:30002,cat:'set',d:'japon',title:'Relays JP',updated:d(600),pub:[['relay','wss://yabu.me'],['relay','wss://r.kojira.io']]}),
+  ev({kind:30078,cat:'app',app:'wavestr',d:'wavestr/favorites',title:'Favoritos',updated:d(5),enc:'NIP-44',json:{version:3,folders:[{name:'Trabajo',children:[{name:'Lo-fi',items:[{type:'station',url:'https://lofi.example/stream',name:'Lofi Radio'}]}]},{name:'Japón',items:[{type:'station',name:'J-Pop Powerplay',url:'http://jpop.example:8000/'}]},{name:'Streams',items:[{type:'live',a:'30311:npub1…:podcast'}]}]}}),
+  ev({kind:30078,cat:'app',app:'wavestr',d:'wavestr/settings',title:'Ajustes',updated:d(48),json:{theme:'auto',accent:'violet',lang:'es',quality:'auto',screenOffAudio:true}}),
+  ev({kind:30078,cat:'app',app:'usus',d:'usus/backup',title:'Copia de seguridad',updated:d(20),enc:'NIP-44',json:{app:'usus',version:'3.5.2',exported:'2026-11-06',sessions:124,routines:[{name:'Empuje',steps:['Flexiones inclinadas','Flexiones','Fondos en banco']},{name:'Tirón',steps:['Remo australiano','Dominadas negativas']}],habits:['Movilidad 10 min','Paseo']}}),
+  ev({kind:30078,cat:'app',app:'usus',d:'usus/backup-2026-10-30',title:'Copia de seguridad (30 oct)',updated:d(190),enc:'NIP-44',json:{app:'usus',version:'3.5.1',sessions:118}}),
+  ev({kind:30078,cat:'app',app:'mado',d:'mado/config',title:'Configuración del blog',updated:d(300),json:{title:'Blog de Oscar',relays:['wss://nos.lol'],theme:'light'}}),
+  ev({kind:30078,cat:'app',app:null,d:'com.ejemplo.cliente/settings',title:'com.ejemplo.cliente/settings',updated:d(2000),json:{zapAmount:21,autoplay:false}}),
+ ]},
+ {id:'a2',name:'Pruebas',handle:'cuenta de pruebas',npub:'npub1tst…4f0z',color:'#b07a4a',signer:'Bunker (NIP-46)',events:[
+  ev({kind:10002,cat:'list',updated:d(10),pub:[['r','wss://nos.lol']]}),
+  ev({kind:30078,cat:'app',app:'wavestr',d:'wavestr/favorites',title:'Favoritos',updated:d(3),enc:'NIP-44',json:{version:3,folders:[{name:'Test',items:[]}]}}),
+ ]},
+ {id:'a3',name:'Wavestr',handle:'cuenta del proyecto',npub:'npub1wav…m3c8',color:'#7b4fd6',signer:'Solo lectura',events:[
+  ev({kind:10002,cat:'list',updated:d(80),pub:[['r','wss://relay.damus.io'],['r','wss://nos.lol']]}),
+  ev({kind:30063,cat:'set',d:'wavestr-1.0.0',title:'Release 1.0.0',updated:d(150),pub:[['i','io.github.oluengo.wavestr'],['version','1.0.0']]}),
+ ]},
+];
+KINDS[30063]='Release (Zapstore)';
+
+/* ---------- state ---------- */
+let chosenIcon='c';
+let S={acc:'a1',path:[],ev:null,q:'',editing:false,err:'',pending:[]};
+const acc=()=>accounts.find(a=>a.id===S.acc);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ago=t=>{const h=(now-t)/3600e3;return h<1?'hace un momento':h<24?`hace ${Math.round(h)} h`:`hace ${Math.round(h/24)} d`};
+const evName=e=>e.title||KINDS[e.kind]||('kind '+e.kind);
+const count=e=>e.json?Object.keys(e.json).length+' claves':((e.pub||[]).length+(e.priv||[]).length)+' elementos';
+const TAGN={p:'persona',e:'nota',a:'evento',t:'hashtag',r:'relay',relay:'relay',word:'palabra',server:'servidor',i:'id',version:'versión'};
+
+function toast(m,ms=1800){const t=document.createElement('div');t.className='toast';t.innerHTML=m;document.body.appendChild(t);setTimeout(()=>t.remove(),ms)}
+function mark(e,desc){e.dirty=true;e.updated=Date.now();S.pending.push({acc:S.acc,ev:e.id,desc});renderBar()}
+
+/* ---------- render ---------- */
+function render(){
+  const a=acc();
+  let h=`<div class="app">
+  <div class="top"><div class="logo">${LOGO()}</div><h1>Tansu</h1><div class="sp"></div>
+   <button class="acct" onclick="sheetAccounts()"><div class="av" style="background:${a.color}">${a.name[0]}</div><span>${esc(a.name)}</span></button><button class="dots" title="Ajustes" onclick="sheetSettings()">⚙</button></div>
+  <label class="search">${I.search}<input id="q" placeholder="Buscar en listas y datos de apps" value="${esc(S.q)}" oninput="S.q=this.value;renderBody()"></label>
+  <div id="body"></div></div>`;
+  $('#demo').innerHTML=h; renderBody(); renderBar();
+}
+function crumbs(){
+  const a=acc(), p=S.path, parts=[[a.name,[]]];
+  if(p[0]) parts.push([{list:'Listas',set:'Conjuntos',app:'Datos de apps'}[p[0]],[p[0]]]);
+  if(p[1]) parts.push([APPS[p[1]]?.name||'Otras',[p[0],p[1]]]);
+  let h='<div class="crumbs">';
+  parts.forEach((x,i)=>{const last=i===parts.length-1&&!S.ev;h+=(i?'<span>›</span>':'')+`<button class="${last?'cur':''}" onclick='go(${JSON.stringify(x[1])})'>${esc(x[0])}</button>`});
+  if(S.ev){const e=find(S.ev);h+=`<span>›</span><span class="cur">${esc(evName(e))}</span>`}
+  return h+'</div>';
+}
+function go(p){S.path=p;S.ev=null;S.editing=false;S.err='';renderBody();window.scrollTo(0,0)}
+function find(id){for(const a of accounts)for(const e of a.events)if(e.id===id)return e}
+function evRow(e){
+  const ic=e.json?I.code:I.list;
+  return `<button class="row" onclick="openEv('${e.id}')"><div class="ico">${ic}</div><div class="t"><div class="n">${esc(evName(e))}</div>
+  <div class="m">kind ${e.kind}${e.d?' · '+esc(e.d):''} · ${count(e)} · ${ago(e.updated)}</div></div>
+  ${e.dirty?'<span class="badge dirty">sin publicar</span>':e.enc?'<span class="badge lock">🔒 '+e.enc+'</span>':''}<span class="chev">${I.chev}</span></button>`;
+}
+function folderRow(name,meta,p,color){
+  return `<button class="row" onclick='go(${JSON.stringify(p)})'><div class="ico f" ${color?`style="background:${color}1a;color:${color}"`:''}>${I.folder}</div><div class="t"><div class="n">${esc(name)}</div><div class="m">${meta}</div></div><span class="chev">${I.chev}</span></button>`;
+}
+function renderBody(){
+  const a=acc(), E=a.events, b=$('#body'); if(!b)return;
+  if(S.q.trim()){
+    const q=S.q.toLowerCase();
+    const r=E.filter(e=>(evName(e)+' '+(e.d||'')+' '+e.kind+' '+JSON.stringify(e.pub||[])+' '+(e.unlocked||!e.enc?JSON.stringify(e.priv||e.json||''):'')).toLowerCase().includes(q));
+    b.innerHTML=`<div class="sec">${r.length} resultado${r.length==1?'':'s'}</div><div class="list">${r.map(evRow).join('')||'<div class="empty">Nada por aquí. Lo cifrado solo se busca tras descifrarlo.</div>'}</div>`;return;
+  }
+  if(S.ev){b.innerHTML=crumbs()+detail(find(S.ev));return}
+  const p=S.path; let h=crumbs()+'<div class="list">';
+  if(!p.length){
+    const L=E.filter(e=>e.cat=='list'),St=E.filter(e=>e.cat=='set'),Ap=E.filter(e=>e.cat=='app');
+    h+=folderRow('Datos de apps',`${Ap.length} · copias y ajustes (NIP-78)`,['app']);
+    h+=folderRow('Listas',`${L.length} · solo lectura (NIP-51)`,['list']);
+    h+=folderRow('Conjuntos',`${St.length} · solo lectura (NIP-51)`,['set']);
+    h+=`</div><p class="note" style="padding:0 14px">Tansu nunca publica nada legible: todo lo que escribe va cifrado (NIP-44) para tu propia cuenta.</p><div class="sec">Recientes</div><div class="list">${[...E].sort((x,y)=>y.updated-x.updated).slice(0,3).map(evRow).join('')}`;
+  } else if(p[0]=='app'&&!p[1]){
+    const Ap=E.filter(e=>e.cat=='app'), groups={};
+    Ap.forEach(e=>{const k=e.app||'_';(groups[k]=groups[k]||[]).push(e)});
+    Object.keys(groups).sort((x,y)=>x=='_'?1:y=='_'?-1:0).forEach(k=>{const g=groups[k];
+      h+=folderRow(k=='_'?'Otras apps':APPS[k].name,`${g.length} archivo${g.length>1?'s':''} · ${ago(Math.max(...g.map(e=>e.updated)))}`,['app',k],k=='_'?null:APPS[k].color)});
+    if(!Ap.length)h+='<div class="empty">Esta cuenta no tiene datos de apps.</div>';
+  } else {
+    const r=E.filter(e=>e.cat==p[0]&&(p[0]!='app'||(e.app||'_')==p[1]));
+    h+=r.map(evRow).join('')||'<div class="empty">Vacío.</div>';
+  }
+  b.innerHTML=h+'</div>';
+}
+function itemRow(e,t,i,priv){
+  const label=t[2]||'';
+  return `<div class="it"><span class="tag">${esc(t[0])}</span><div class="v"><div>${esc(label||t[1])}</div><small>${esc(label?t[1]:(TAGN[t[0]]||''))}${t[0]=='r'&&t[2]&&!['read','write'].includes(t[2])?'':''}</small></div>
+  <button class="dots" onclick="sheetItem('${e.id}',${priv},${i})">•••</button></div>`;
+}
+function detail(e){
+  let h=`<div class="det"><h2>${esc(evName(e))}</h2><div class="meta">
+   <span class="badge">kind ${e.kind} · ${KINDS[e.kind]||''}</span>${e.d?`<span class="badge">d: ${esc(e.d)}</span>`:''}
+   <span class="badge">${ago(e.updated)}</span><span class="badge">en ${e.relays} relays</span>${e.enc?`<span class="badge lock">🔒 ${e.enc}</span>`:''}${e.dirty?'<span class="badge dirty">sin publicar</span>':''}</div>`;
+  const locked=e.enc&&!e.unlocked;
+  if(e.json){
+    h+=`<div class="box"><div class="hd">${locked?'🔒 Contenido cifrado':'Contenido (JSON)'}<div class="sp"></div>${!locked&&!S.editing?`<button class="btn s" onclick="S.editing=true;renderBody()">Editar</button>`:''}</div>`;
+    if(locked) h+=`<div class="locked">Cifrado para ti. Lo descifra tu firmante, la app no ve tu nsec.<br><br><button class="btn p" onclick="unlock('${e.id}')">Descifrar con ${acc().signer.split(' ')[0]}</button></div>`;
+    else if(S.editing) h+=`<textarea id="ta" spellcheck="false">${esc(JSON.stringify(e.json,null,2))}</textarea>${S.err?`<div class="err">${esc(S.err)}</div>`:''}<div style="padding:10px 12px;display:flex;gap:8px;border-top:1px solid var(--line)"><button class="btn p s" onclick="saveJson('${e.id}')">Guardar</button><button class="btn s" onclick="S.editing=false;S.err='';renderBody()">Cancelar</button></div>`;
+    else h+=`<pre>${esc(JSON.stringify(e.json,null,2))}</pre>`;
+    h+='</div>';
+  } else {
+    h+=`<div class="box"><div class="hd">Públicos <span class="badge">${(e.pub||[]).length}</span><div class="sp"></div></div>${(e.pub||[]).map((t,i)=>itemRow(e,t,i,false)).join('')||'<div class="locked">Sin elementos públicos</div>'}</div>`;
+    if(e.priv||e.enc){
+      h+=`<div class="box"><div class="hd">🔒 Privados ${locked?'':`<span class="badge">${(e.priv||[]).length}</span>`}<div class="sp"></div></div>`;
+      h+=locked?`<div class="locked">Elementos cifrados en <code>content</code>.<br><br><button class="btn p" onclick="unlock('${e.id}')">Descifrar con ${acc().signer.split(' ')[0]}</button></div>`:((e.priv||[]).map((t,i)=>itemRow(e,t,i,true)).join('')||'<div class="locked">Sin elementos privados</div>');
+      h+='</div>';
+    }
+  }
+  h+=`<div class="acts"><button class="btn" onclick="sheetCopy('${e.id}')">Copiar a otra cuenta</button><button class="btn" onclick="exportEv('${e.id}')">Copiar JSON del evento</button>${e.json&&!e.enc?'':`<button class="btn" onclick="toast('Archivo guardado')">Exportar archivo</button>`}<button class="btn d" onclick="sheetDelete('${e.id}')">Eliminar…</button></div></div>`;
+  return h;
+}
+function renderBar(){
+  const n=S.pending.length,b=$('#bar');
+  b.innerHTML=n?`<div class="bar"><div class="sp">${n} cambio${n>1?'s':''} sin publicar</div><button class="btn g s" onclick="sheetPending()">Revisar</button><button class="btn s" onclick="publish()">Firmar y publicar</button></div>`:'';
+}
+
+/* ---------- actions ---------- */
+function openEv(id){S.ev=id;S.q='';const q=$('#q');if(q)q.value='';S.editing=false;S.err='';renderBody();window.scrollTo(0,0)}
+function unlock(id){const e=find(id);const signer=acc().signer.split(' ')[0];
+  if(signer==='Solo'){toast('Cuenta de solo lectura: no se puede descifrar');return}
+  toast(`<span class="spin"></span> Pidiendo a ${signer} que descifre…`,900);
+  setTimeout(()=>{e.unlocked=true;renderBody()},900)}
+function saveJson(id){const e=find(id);try{const v=JSON.parse($('#ta').value);e.json=v;S.editing=false;S.err='';mark(e,`Editado ${evName(e)}`);renderBody()}catch(x){S.err='JSON no válido: '+x.message;renderBody()}}
+function exportEv(id){const e=find(id);const o={kind:e.kind,tags:[...(e.d?[['d',e.d]]:[]),...(e.pub||[])],content:e.enc?'<cifrado '+e.enc+'>':JSON.stringify(e.json||'')};
+  try{navigator.clipboard.writeText(JSON.stringify(o,null,2)).then(()=>toast('JSON copiado'),()=>toast('No se pudo copiar'))}catch(x){toast('No se pudo copiar')}}
+function publish(){const n=S.pending.length;const ro=S.pending.some(p=>accounts.find(a=>a.id===p.acc).signer==='Solo lectura');
+  if(ro){toast('Hay cambios en una cuenta de solo lectura');return}
+  toast(`<span class="spin"></span> Firmando ${n} evento${n>1?'s':''}…`,1100);
+  setTimeout(()=>{S.pending.forEach(p=>{const e=find(p.ev);if(e){e.dirty=false}});S.pending=[];renderBar();renderBody();toast('✓ Publicado en 4 relays')},1100)}
+
+/* ---------- sheets ---------- */
+function sheetSettings(){sheet(`<h3>Ajustes</h3>
+ <div class="sec">Cuentas</div>${accounts.map(a=>`<div class="it"><div class="av" style="background:${a.color}">${a.name[0]}</div><div class="v"><div>${esc(a.name)}</div><small>${a.npub} · ${a.signer}</small></div><button class="btn s">Renombrar</button><button class="btn s d">Quitar</button></div>`).join('')}
+ <div class="sec">Apariencia e idioma</div><div class="it"><div class="v">Tema</div><span class="badge">Claro</span><span class="badge">Oscuro</span><span class="badge" style="background:var(--accent-soft);color:var(--accent)">Auto</span></div>
+ <div class="it"><div class="v">Color de acento</div>${['#3d4fa8','#6d28d9','#0e7c6b','#d9480f','#be185d'].map(c=>`<span style="width:22px;height:22px;border-radius:50%;background:${c};display:inline-block"></span>`).join('')}</div>
+ <div class="it"><div class="v">Idioma</div><span class="badge">Idioma del dispositivo · Català · Español · English</span></div>
+ <div class="sec">Relays</div><div class="it"><div class="v"><div>Relays de Tansu</div><small>relay.damus.io · nos.lol · relay.primal.net (+ los NIP-65 de cada cuenta)</small></div></div>
+ <div class="sec">Papelera</div><div class="it"><div class="v"><div>usus/backup-2026-10-30</div><small>Oscar · hace 2 d · copia local cifrada</small></div><button class="btn s">Restaurar</button></div>
+ <div class="sec">Acerca de</div>
+ <div class="it"><div style="width:36px;height:36px">${LOGO()}</div><div class="v"><div><b>Tansu</b> versión 0.1.0 beta</div><small>Hecha con IA · probada por humanos · Licencia MIT</small></div></div>
+ <div class="it"><div class="v"><div>Código fuente</div><small>github.com/oluengo/tansu</small></div><span>↗</span></div>
+ <div class="it"><div class="v"><div>Créditos · Icono de Nostr: Purple Nostrich de SovrynMatt</div><small>github.com/SovrynMatt/Nostr-Website-Button-Design</small></div><span>↗</span></div>
+ <div class="it"><div class="av" style="background:#F7931A">₿</div><div class="v"><div>Bitcoin</div><small>bc1pnvdct6hf…8raspa · toca para copiar</small></div></div>
+ <div class="it"><div class="av" style="background:#7B3FE4">⚡</div><div class="v"><div>Lightning / zaps</div><small>oluengo@rizful.com · toca para copiar</small></div></div>`)}
+
+function sheet(h){$('#layer').innerHTML=`<div class="shade" onclick="if(event.target===this)closeS()"><div class="sheet">${h}</div></div>`}
+function closeS(){$('#layer').innerHTML=''}
+function sheetAccounts(){
+  sheet(`<h3>Cuentas</h3>${accounts.map(a=>`<button class="row" onclick="S.acc='${a.id}';S.path=[];S.ev=null;closeS();render()"><div class="av" style="background:${a.color};width:36px;height:36px">${a.name[0]}</div><div class="t"><div class="n">${esc(a.name)} ${a.id===S.acc?'✓':''}</div><div class="m">${esc(a.handle)} · ${a.npub} · ${a.signer}</div></div></button>`).join('')}
+  <div class="sec">Añadir cuenta</div>
+  <button class="row" onclick="closeS();toast('Abriendo Amber…')"><div class="ico">${I.file}</div><div class="t"><div class="n">Amber</div><div class="m">Firmante en este móvil (NIP-55)</div></div></button>
+  <button class="row" onclick="closeS();toast('Pega tu bunker:// o escanea el QR')"><div class="ico">${I.file}</div><div class="t"><div class="n">Bunker</div><div class="m">bunker:// o nostrconnect:// (NIP-46)</div></div></button>
+  <button class="row" onclick="closeS();toast('Pega una npub para solo lectura')"><div class="ico">${I.file}</div><div class="t"><div class="n">Solo npub</div><div class="m">Ver sin poder descifrar ni editar</div></div></button>
+  <p class="note">La app nunca guarda la nsec.</p>`)}
+function sheetItem(id,priv,i){const e=find(id),arr=priv?e.priv:e.pub,t=arr[i];
+  sheet(`<h3>${esc(t[2]||t[1])}</h3><p class="note">${esc(t[0])} · ${esc(t[1])}</p>
+  <button class="row" onclick="sheetEdit('${id}',${priv},${i})">Editar</button>
+  <button class="row" onclick="try{navigator.clipboard.writeText('${esc(t[1])}')}catch(x){};closeS();toast('Copiado')">Copiar valor</button>
+  <p class="note">Las listas NIP-51 son de solo lectura en esta versión.</p>`)}
+function moveItem(id,priv,i){const e=find(id);const from=priv?e.priv:e.pub;const [t]=from.splice(i,1);if(priv)e.pub.push(t);else{(e.priv=e.priv||[]).push(t);e.enc=e.enc||'NIP-44';e.unlocked=true}closeS();mark(e,`${t[2]||t[1]} → ${priv?'público':'privado'}`);renderBody()}
+function delItem(id,priv,i){const e=find(id);const [t]=(priv?e.priv:e.pub).splice(i,1);closeS();mark(e,`Quitado ${t[2]||t[1]}`);renderBody()}
+function form(id,priv,i){const e=find(id);const t=i==null?['',' ','']:(priv?e.priv:e.pub)[i];
+  const tags=['p','e','a','t','r','relay','word','server','i'];
+  return `<label class="field"><span>Tipo de etiqueta</span><select id="ft">${tags.map(x=>`<option ${x==t[0]?'selected':''}>${x}</option>`).join('')}</select></label>
+  <label class="field"><span>Valor (npub, note, relay, palabra…)</span><input id="fv" value="${esc(t[1].trim())}"></label>
+  <label class="field"><span>Etiqueta visible (opcional)</span><input id="fl" value="${esc(t[2]||'')}"></label>
+  <button class="btn p" onclick="saveItem('${id}',${priv},${i==null?'null':i})">Guardar</button>`}
+function sheetEdit(id,priv,i){sheet('<h3>Editar elemento</h3>'+form(id,priv,i))}
+function sheetAdd(id,priv){sheet(`<h3>Añadir ${priv?'elemento privado':'elemento público'}</h3>`+form(id,priv,null))}
+function saveItem(id,priv,i){const e=find(id);const v=$('#fv').value.trim();if(!v){toast('Falta el valor');return}
+  const t=[$('#ft').value,v];const l=$('#fl').value.trim();if(l)t.push(l);
+  const arr=priv?(e.priv=e.priv||[]):e.pub; if(i==null)arr.push(t);else arr[i]=t;closeS();mark(e,`${i==null?'Añadido':'Editado'} ${l||v}`);renderBody()}
+function sheetCopy(id){const e=find(id);const others=accounts.filter(a=>a.id!==S.acc);
+  sheet(`<h3>Copiar «${esc(evName(e))}» a…</h3>${others.map(a=>`<button class="row" onclick="copyTo('${id}','${a.id}')"><div class="av" style="background:${a.color};width:36px;height:36px">${a.name[0]}</div><div class="t"><div class="n">${esc(a.name)}</div><div class="m">${a.signer}${a.events.some(x=>x.kind==e.kind&&x.d==e.d)?' · ya tiene uno: se reemplazará':''}</div></div></button>`).join('')}
+  <p class="note">${e.enc?'Se descifra con tu cuenta y se vuelve a cifrar para la cuenta de destino.':''} Si es reemplazable, el de destino se sobrescribe; antes se guarda una copia local.</p>`)}
+function copyTo(id,aid){const e=find(id),a=accounts.find(x=>x.id===aid);
+  if(a.signer==='Solo lectura'){toast('Esa cuenta es de solo lectura');return}
+  a.events=a.events.filter(x=>!(x.kind==e.kind&&x.d==e.d));const c=ev(JSON.parse(JSON.stringify(e)));c.id='ev'+(uid++);c.unlocked=true;a.events.push(c);
+  closeS();const prev=S.acc;S.acc=aid;mark(c,`Copia de ${evName(e)} en ${a.name}`);S.acc=prev;toast(`Copiado a ${a.name} (pendiente de firmar)`)}
+function sheetDelete(id){const e=find(id);
+  sheet(`<h3>Eliminar «${esc(evName(e))}»</h3><p class="note">Se publica una petición de borrado (NIP-09, kind 5). La mayoría de relays la respetan, pero no todos: puede quedar alguna copia.</p>
+  <p class="note">Antes de borrar, Tansu guarda una copia local que podrás restaurar desde la Papelera.</p>
+  <div class="acts"><button class="btn d" onclick="doDelete('${id}')">Eliminar</button><button class="btn" onclick="closeS()">Cancelar</button></div>`)}
+function doDelete(id){const a=acc();const e=find(id);a.events=a.events.filter(x=>x.id!==id);S.pending=S.pending.filter(p=>p.ev!==id);S.pending.push({acc:S.acc,ev:'del',desc:`Borrar ${evName(e)} (kind 5)`});closeS();go(S.path);renderBar()}
+function sheetPending(){sheet(`<h3>Cambios sin publicar</h3>${S.pending.map(p=>`<div class="it"><div class="av" style="background:${accounts.find(a=>a.id===p.acc).color}">${accounts.find(a=>a.id===p.acc).name[0]}</div><div class="v">${esc(p.desc)}</div></div>`).join('')}
+  <div class="acts"><button class="btn p" onclick="closeS();publish()">Firmar y publicar</button><button class="btn d" onclick="S.pending=[];closeS();renderBar();toast('Cambios descartados (en la demo siguen en pantalla)')">Descartar todo</button></div>`)}
+
+render();
+</script>
+</body>
+</html>
