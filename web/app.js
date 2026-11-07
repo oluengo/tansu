@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.2.0" + (BETA ? " beta" : "");
+const VERSION = "0.3.0" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -484,6 +484,82 @@ function applyTheme() {
 }
 const saveSettings = () => { LS.set(P + "settings", st.settings); applyTheme(); render(); };
 
+
+// ---------- Vista «Visual» del JSON (mismas reglas que JsonView.kt en Android) ----------
+// Genérica: fichas clave → valor, árboles de carpetas, tablas, etiquetas, fechas legibles y sí/no. Solo para leer.
+const JV = {
+  isObj: v => v && typeof v === "object" && !Array.isArray(v),
+  isPrim: v => v === null || typeof v !== "object",
+  human: k => { const s = String(k).replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); },
+  DATE_KEY: /(^|_)(t|ts|at|date|time|created|updated|exported|last|since|until)($|_|[A-Z])|At$|Date$|Time$|^last|^created|^updated/i,
+  date(v, key) {
+    if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(v)) { const d = new Date(v.length === 10 ? v + "T00:00:00Z" : v); return isNaN(d) ? null : d; }
+    if (typeof v === "number" && JV.DATE_KEY.test(String(key || ""))) {
+      if (v >= 1e12 && v < 1e13) return new Date(v);
+      if (v >= 1e9 && v < 1e10) return new Date(v * 1000);
+    }
+    return null;
+  },
+  title: o => o.name ?? o.title ?? o.label ?? o.d ?? null,
+  kids: o => ["children", "items", "folders", "entries", "files"].find(k => Array.isArray(o[k])),
+  isTree: a => a.length > 0 && a.every(o => JV.isObj(o) && JV.title(o) != null) && a.some(o => JV.kids(o)),
+  isChips: a => a.length <= 40 && a.every(v => typeof v === "string" && v.length <= 40),
+  isTable: a => a.length > 0 && a.every(o => JV.isObj(o) && Object.values(o).every(v => JV.isPrim(v) || (Array.isArray(v) && v.every(JV.isPrim)))),
+  isFlat: v => JV.isPrim(v) || (Array.isArray(v) && v.length <= 12 && JV.isChips(v)),
+};
+let jvId = 0;
+function jvPrim(v, key, cell) {
+  if (v === null || v === undefined) return `<span class="muted">—</span>`;
+  if (typeof v === "boolean") return cell ? `<b class="${v ? "ok" : "danger"}">${v ? "✓" : "✗"}</b>` : `<span class="jchip ${v ? "yes" : "no"}">${v ? "✓ " + T("value_yes") : "✗ " + T("value_no")}</span>`;
+  const d = JV.date(v, key);
+  if (d) return cell ? esc(new Intl.DateTimeFormat(lang, { dateStyle: "medium" }).format(d))
+    : `<span>${esc(new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: typeof v === "string" && v.length === 10 ? undefined : "short" }).format(d))}<small class="mono muted" style="display:block;font-size:11px">${esc(v)}</small></span>`;
+  if (typeof v === "number") return `<span class="mono">${esc(v.toLocaleString(lang))}</span>`;
+  if (v === "") return `<span class="muted">${T("value_empty_text")}</span>`;
+  if (/^https?:\/\/\S+$/.test(v)) return `<a href="${esc(v)}" target="_blank" rel="noopener noreferrer">${esc(v)}</a>`;
+  if (/^wss?:\/\/\S+$/.test(v)) return `<span class="mono">${esc(v)}</span>`;
+  return esc(v);
+}
+const jvChips = a => a.length ? a.map(v => `<span class="jchip">${esc(v)}</span>`).join("") : `<span class="muted small">${T("value_empty_list")}</span>`;
+function jvSection(title, v, open) {
+  const cnt = Array.isArray(v) ? v.length : JV.isObj(v) ? TP("fields", Object.keys(v).length) : "";
+  return `<details class="jsec" ${open ? "open" : ""}><summary><span class="jchev">›</span>${esc(title)}<span class="jcnt">${esc(cnt)}</span></summary><div class="jbody">${jvNode(v)}</div></details>`;
+}
+function jvTree(a) {
+  return `<ul class="jtree">${a.map(o => {
+    const ck = JV.kids(o), kids = ck ? o[ck] : null, t = JV.title(o);
+    const meta = Object.entries(o).filter(([k, v]) => k !== ck && JV.isPrim(v) && v !== null && v !== t).map(([k, v]) => JV.human(k) + ": " + v).join(" · ");
+    const head = `<div class="jnode"><span class="jic ${kids ? "f" : ""}">${kids ? "📁" : "📄"}</span><span class="t"><div class="n">${esc(t ?? "")}</div>${meta ? `<div class="m">${esc(meta)}</div>` : ""}</span>${kids ? `<span class="jcnt">${kids.length}</span>` : ""}</div>`;
+    if (!kids) return `<li>${head}</li>`;
+    const inner = !kids.length ? `<div class="muted small" style="padding-left:36px">${T("value_empty_list")}</div>`
+      : kids.every(k => JV.isObj(k) && JV.title(k) != null) ? jvTree(kids) : `<div style="padding-left:36px">${jvNode(kids)}</div>`;
+    return `<li>${head}${inner}</li>`;
+  }).join("")}</ul>`;
+}
+function jvTable(a) {
+  const cols = []; for (const o of a) for (const k of Object.keys(o)) if (!cols.includes(k)) cols.push(k);
+  const id = "jt" + (++jvId), LIM = 15;
+  const cell = (o, k) => { const v = o[k]; if (v === undefined) return ""; return Array.isArray(v) ? esc(v.join(", ")) : jvPrim(v, k, true); };
+  return `<div class="jtw"><table class="jtab"><thead><tr>${cols.map(k => `<th title="${esc(k)}">${esc(JV.human(k))}</th>`).join("")}</tr></thead><tbody>${a.map((o, i) => `<tr ${i >= LIM ? `class="${id}" hidden` : ""}>${cols.map(k => `<td>${cell(o, k)}</td>`).join("")}</tr>`).join("")}</tbody></table>${a.length > LIM ? `<button class="jmore" data-a="jvrows" data-x="${id}">${T("view_rows", a.length)}</button>` : ""}</div>`;
+}
+function jvNode(v) {
+  if (JV.isPrim(v)) return jvPrim(v);
+  if (Array.isArray(v)) {
+    if (!v.length) return `<span class="muted small">${T("value_empty_list")}</span>`;
+    if (JV.isChips(v)) return jvChips(v);
+    if (v.every(JV.isPrim)) return `<ol class="jol">${v.map(x => `<li>${jvPrim(x)}</li>`).join("")}</ol>`;
+    if (JV.isTree(v)) return jvTree(v);
+    if (JV.isTable(v)) return jvTable(v);
+    return v.map((x, i) => jvSection((JV.isObj(x) && JV.title(x)) || `#${i + 1}`, x, false)).join("");
+  }
+  const ent = Object.entries(v);
+  if (!ent.length) return `<span class="muted small">${T("value_empty_text")}</span>`;
+  const flat = ent.filter(([, x]) => JV.isFlat(x)), nested = ent.filter(([, x]) => !JV.isFlat(x));
+  let h = flat.length ? `<dl class="jkv">${flat.map(([k, x]) => `<div><dt title="${esc(k)}">${esc(JV.human(k))}</dt><dd>${Array.isArray(x) ? jvChips(x) : jvPrim(x, k)}</dd></div>`).join("")}</dl>` : "";
+  for (const [k, x] of nested) h += jvSection(JV.human(k), x, nested.length <= 3);
+  return h;
+}
+
 // ---------- Vistas ----------
 const LOGO = `<img class="logo" src="icon.svg" alt="">`;
 const cur = () => st.route[st.route.length - 1];
@@ -581,8 +657,12 @@ function item(sn, r) {
   if (o?.manifest) for (const k of ["app", "profile", "v"]) if (o.manifest[k] != null && typeof o.manifest[k] !== "object") h += `<dt>${k}</dt><dd>${esc(o.manifest[k])}</dd>`;
   h += `</dl></div>`;
   if (e.enc === "plain") h += `<p class="small danger">${T("plain_warning")}</p>`;
-  h += `<div class="group np"><div class="hd">${T("content")}<span class="sp"></span>${text != null ? `<span class="small muted">${size(new TextEncoder().encode(text).length)}</span>` : ""}</div>`;
-  if (text != null) {
+  let json; try { json = text != null ? JSON.parse(text) : undefined; } catch { json = undefined; }
+  const visual = json !== undefined && LS.get(P + "view", "visual") === "visual";
+  const seg = json === undefined ? "" : `<div class="seg mini">${["visual", "code"].map(m => `<button class="${(m === "visual") === visual ? "on" : ""}" data-a="view" data-x="${m}">${T(m === "visual" ? "view_visual" : "view_code")}</button>`).join("")}</div>`;
+  h += `<div class="group np"><div class="hd">${T("content")}<span class="sp"></span>${seg || (text != null ? `<span class="small muted">${size(new TextEncoder().encode(text).length)}</span>` : "")}</div>`;
+  if (visual) h += `<div class="jv">${jvNode(json)}</div>`;
+  else if (text != null) {
     const p = pretty(text), cut = !r.all && p.length > PREVIEW;
     h += `<pre class="content mono">${esc(cut ? p.slice(0, PREVIEW) + "\n…" : p)}</pre>`;
     if (cut) h += `<div style="padding:0 8px 8px"><button class="btn t" data-a="showall">${T("show_all")}</button></div>`;
@@ -738,6 +818,8 @@ const ACT = {
   go(el) { go(JSON.parse(el.dataset.x)); },
   sec(el) { go({ v: "settings", sec: el.dataset.x }); },
   clearq() { st.q = ""; render(); },
+  view(el) { LS.set(P + "view", el.dataset.x); render(); },
+  jvrows(el) { document.querySelectorAll("." + el.dataset.x).forEach(r => r.hidden = false); el.remove(); },
   showall() { cur().all = true; render(); },
   accounts() {
     sheet(`<h3>${T("accounts")}</h3>${st.accounts.map(a => `<button class="row" data-a="pickacc" data-x="${a.pubkey}">${avatar(a, "l")}<span class="t"><div class="n">${esc(nameOf(a))}</div><div class="m">${shortNpub(a.pubkey)} · ${methodLabel(a.method)}</div></span>${a.pubkey === acc()?.pubkey ? "✓" : ""}</button>`).join("")}

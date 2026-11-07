@@ -20,6 +20,8 @@ data class AppSettings(
     val accent: Accent = Accent.INDIGO,
     /** Relays de Tansu; null = los de serie. */
     val appRelays: List<String>? = null,
+    /** Contenido de un archivo: vista visual (true) o código (false). Se recuerda la última elegida. */
+    val visual: Boolean = true,
 )
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
@@ -29,6 +31,7 @@ class SettingsRepository(private val context: Context) {
         val theme = stringPreferencesKey("theme")
         val accent = stringPreferencesKey("accent")
         val relays = stringPreferencesKey("app_relays")
+        val view = stringPreferencesKey("content_view")
     }
 
     val flow: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -36,6 +39,7 @@ class SettingsRepository(private val context: Context) {
             theme = p[K.theme]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
             accent = p[K.accent]?.let { runCatching { Accent.valueOf(it) }.getOrNull() } ?: Accent.INDIGO,
             appRelays = p[K.relays]?.split('\n')?.filter { it.isNotBlank() },
+            visual = p[K.view] != "code",
         )
     }
 
@@ -45,6 +49,8 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[K.theme] = mode.name }
         applyNightMode(mode)
     }
+
+    suspend fun setVisual(v: Boolean) = context.dataStore.edit { it[K.view] = if (v) "visual" else "code" }
 
     suspend fun setAccent(a: Accent) = context.dataStore.edit { it[K.accent] = a.name }
 

@@ -48,6 +48,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -571,6 +574,7 @@ private fun ItemScreen(c: AppContainer, account: Account, e: Entry, go: (Route) 
     val ctx = LocalContext.current
     val opened = st.opened[e.d]
     val enc = e.encoding
+    val settings by c.settings.flow.collectAsStateWithLifecycle(initialValue = io.github.oluengo.tansu.data.AppSettings())
     var busy by remember { mutableStateOf(false) }
     var showAll by remember { mutableStateOf(false) }
     var askDelete by remember { mutableStateOf(false) }
@@ -607,12 +611,24 @@ private fun ItemScreen(c: AppContainer, account: Account, e: Entry, go: (Route) 
         if (enc == Encoding.PLAIN) Text(stringResource(R.string.plain_warning), color = Ts.colors.danger, style = MaterialTheme.typography.bodySmall)
 
         Group(padding = 0.dp) {
-            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            val json = remember(text) { text?.let { t -> runCatching { NostrJson.parseToJsonElement(t) }.getOrNull() } }
+            val visual = settings.visual && json != null
+            Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.content), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                if (text != null) Text(size(ctx, text.toByteArray().size), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+                if (json != null) {
+                    SingleChoiceSegmentedButtonRow {
+                        listOf(true to R.string.view_visual, false to R.string.view_code).forEachIndexed { i, (v, label) ->
+                            SegmentedButton(
+                                selected = settings.visual == v, onClick = { scope.launch { c.settings.setVisual(v) } },
+                                shape = SegmentedButtonDefaults.itemShape(i, 2), icon = {},
+                            ) { Text(stringResource(label), fontSize = 12.sp) }
+                        }
+                    }
+                } else if (text != null) Text(size(ctx, text.toByteArray().size), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
             }
             HorizontalDivider(color = Ts.colors.line)
             when {
+                visual -> SelectionContainer { JsonVisual(json!!) }
                 text != null -> {
                     val shown = remember(text) { pretty(text) }
                     val cut = !showAll && shown.length > PREVIEW

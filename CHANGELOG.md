@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 (beta)
+
+- Contenido con dos vistas: **Visual** (fichas, árboles de carpetas, tablas, etiquetas, fechas legibles, sí/no; genérica para cualquier app) y **Código** (el JSON tal cual, que es lo que se edita). Visual por defecto; se recuerda la última elegida. Android y web.
+
 ## 0.2.0 (beta)
 
 - Editar listas NIP-51: añadir y editar elementos privados (cifrados con NIP-44), quitar públicos o hacerlos privados. Nunca se añade nada público; la versión anterior queda en la papelera.

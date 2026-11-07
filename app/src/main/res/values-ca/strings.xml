@@ -148,6 +148,13 @@
     <string name="issue_expected">Què esperaves</string>
     <string name="issue_what_you_want">Què t\'agradaria</string>
     <string name="issue_what_for">Per a què ho faries servir</string>
+    <string name="view_visual">Visual</string>
+    <string name="view_code">Codi</string>
+    <string name="view_rows">Mostra les %1$d files</string>
+    <string name="value_yes">sí</string>
+    <string name="value_no">no</string>
+    <string name="value_empty_text">(buit)</string>
+    <string name="value_empty_list">buida</string>
     <string name="credits_title">Crèdits</string>
     <string name="credits_nostrich">Icona de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Lliure i de codi obert; vectoritzat per a la icona de Tansu</string>
@@ -197,6 +204,10 @@
     <plurals name="relays_count">
         <item quantity="one">%d relay de Tansu</item>
         <item quantity="other">%d relays de Tansu</item>
+    </plurals>
+    <plurals name="fields">
+        <item quantity="one">%d camp</item>
+        <item quantity="other">%d camps</item>
     </plurals>
     <plurals name="trash_count">
         <item quantity="one">%d còpia</item>

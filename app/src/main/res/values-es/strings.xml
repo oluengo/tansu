@@ -148,6 +148,13 @@
     <string name="issue_expected">Qué esperabas</string>
     <string name="issue_what_you_want">Qué te gustaría</string>
     <string name="issue_what_for">Para qué lo usarías</string>
+    <string name="view_visual">Visual</string>
+    <string name="view_code">Código</string>
+    <string name="view_rows">Ver las %1$d filas</string>
+    <string name="value_yes">sí</string>
+    <string name="value_no">no</string>
+    <string name="value_empty_text">(vacío)</string>
+    <string name="value_empty_list">vacía</string>
     <string name="credits_title">Créditos</string>
     <string name="credits_nostrich">Icono de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Libre y de código abierto; vectorizado para el icono de Tansu</string>
@@ -197,6 +204,10 @@
     <plurals name="relays_count">
         <item quantity="one">%d relay de Tansu</item>
         <item quantity="other">%d relays de Tansu</item>
+    </plurals>
+    <plurals name="fields">
+        <item quantity="one">%d campo</item>
+        <item quantity="other">%d campos</item>
     </plurals>
     <plurals name="trash_count">
         <item quantity="one">%d copia</item>

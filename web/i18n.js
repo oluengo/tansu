@@ -150,6 +150,13 @@ window.TANSU_I18N = {
 "issue_expected": "What you expected",
 "issue_what_you_want": "What you would like",
 "issue_what_for": "What you would use it for",
+"view_visual": "Visual",
+"view_code": "Code",
+"view_rows": "Show all %1$d rows",
+"value_yes": "yes",
+"value_no": "no",
+"value_empty_text": "(empty)",
+"value_empty_list": "empty",
 "credits_title": "Credits",
 "credits_nostrich": "Nostr icon: Purple Nostrich by SovrynMatt",
 "credits_nostrich_sub": "Free and open source; vectorized for the Tansu icon",
@@ -341,6 +348,13 @@ window.TANSU_I18N = {
 "issue_expected": "Qué esperabas",
 "issue_what_you_want": "Qué te gustaría",
 "issue_what_for": "Para qué lo usarías",
+"view_visual": "Visual",
+"view_code": "Código",
+"view_rows": "Ver las %1$d filas",
+"value_yes": "sí",
+"value_no": "no",
+"value_empty_text": "(vacío)",
+"value_empty_list": "vacía",
 "credits_title": "Créditos",
 "credits_nostrich": "Icono de Nostr: Purple Nostrich de SovrynMatt",
 "credits_nostrich_sub": "Libre y de código abierto; vectorizado para el icono de Tansu",
@@ -532,6 +546,13 @@ window.TANSU_I18N = {
 "issue_expected": "Què esperaves",
 "issue_what_you_want": "Què t'agradaria",
 "issue_what_for": "Per a què ho faries servir",
+"view_visual": "Visual",
+"view_code": "Codi",
+"view_rows": "Mostra les %1$d files",
+"value_yes": "sí",
+"value_no": "no",
+"value_empty_text": "(buit)",
+"value_empty_list": "buida",
 "credits_title": "Crèdits",
 "credits_nostrich": "Icona de Nostr: Purple Nostrich de SovrynMatt",
 "credits_nostrich_sub": "Lliure i de codi obert; vectoritzat per a la icona de Tansu",
@@ -601,6 +622,10 @@ window.TANSU_I18N = {
 "%d Tansu relay",
 "%d Tansu relays"
 ],
+"fields": [
+"%d field",
+"%d fields"
+],
 "trash_count": [
 "%d copy",
 "%d copies"
@@ -631,6 +656,10 @@ window.TANSU_I18N = {
 "%d relay de Tansu",
 "%d relays de Tansu"
 ],
+"fields": [
+"%d campo",
+"%d campos"
+],
 "trash_count": [
 "%d copia",
 "%d copias"
@@ -660,6 +689,10 @@ window.TANSU_I18N = {
 "relays_count": [
 "%d relay de Tansu",
 "%d relays de Tansu"
+],
+"fields": [
+"%d camp",
+"%d camps"
 ],
 "trash_count": [
 "%d còpia",
