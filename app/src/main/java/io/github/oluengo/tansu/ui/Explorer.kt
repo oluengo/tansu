@@ -238,7 +238,7 @@ private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Rout
             item {
                 FolderRow(
                     stringResource(R.string.folder_lists),
-                    ctx.resources.getQuantityString(R.plurals.items, snap.lists.size, snap.lists.size) + " · " + stringResource(R.string.lists_readonly),
+                    ctx.resources.getQuantityString(R.plurals.items, snap.lists.size, snap.lists.size),
                     Icons.AutoMirrored.Outlined.List,
                 ) { go(Route.Lists) }
             }
@@ -378,6 +378,9 @@ private fun TagRow(t: List<String>) {
     }
 }
 
+/** Elemento de lista en edición: etiqueta y si es privado. */
+private data class EditItem(val tag: List<String>, val private: Boolean)
+
 @Composable
 private fun ListScreen(c: AppContainer, account: Account, e: Event) {
     val st by c.explorer.state.collectAsStateWithLifecycle()
@@ -385,39 +388,175 @@ private fun ListScreen(c: AppContainer, account: Account, e: Event) {
     val ctx = LocalContext.current
     var busy by remember { mutableStateOf(false) }
     val priv = st.listPrivate[e.address]
+    val needsDecrypt = Lists.hasPrivate(e) && priv == null
+    // Edición: lista de trabajo; null = solo ver.
+    var draft by remember(e.id) { mutableStateOf<List<EditItem>?>(null) }
+    var adding by remember { mutableStateOf<Int?>(null) } // -1 = nuevo; índice = editar
+    var confirm by remember { mutableStateOf(false) }
+
+    fun decrypt(then: () -> Unit = {}) {
+        busy = true
+        scope.launch {
+            c.explorer.openList(e).onSuccess { then() }.onFailure { Toast.makeText(ctx, errorText(ctx, it), Toast.LENGTH_LONG).show() }
+            busy = false
+        }
+    }
+    fun startEdit(privItems: List<List<String>>) {
+        draft = Lists.publicItems(e).map { EditItem(it, false) } + privItems.map { EditItem(it, true) }
+    }
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Group {
             InfoRow("kind", "${e.kind}")
             e.tag("d")?.takeIf { it.isNotEmpty() }?.let { InfoRow("d", it) }
             InfoRow(stringResource(R.string.info_updated), fullDate(e.createdAt))
         }
-        Group {
-            Text(stringResource(R.string.list_public, Lists.publicItems(e).size), fontWeight = FontWeight.SemiBold)
-            val pub = Lists.publicItems(e)
-            if (pub.isEmpty()) Text(stringResource(R.string.none), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
-            pub.forEach { TagRow(it) }
-        }
-        if (Lists.hasPrivate(e)) Group {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Lock, null, tint = Ts.colors.lock, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(6.dp))
-                Text(stringResource(R.string.list_private), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                if (priv != null) Badge(priv.size.toString())
+        val d = draft
+        if (d == null) {
+            Group {
+                Text(stringResource(R.string.list_public, Lists.publicItems(e).size), fontWeight = FontWeight.SemiBold)
+                val pub = Lists.publicItems(e)
+                if (pub.isEmpty()) Text(stringResource(R.string.none), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+                pub.forEach { TagRow(it) }
             }
-            when {
-                priv != null -> if (priv.isEmpty()) Text(stringResource(R.string.none), color = Ts.colors.muted) else priv.forEach { TagRow(it) }
-                !account.canSign -> Text(stringResource(R.string.readonly_cannot_decrypt), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
-                else -> Button(enabled = !busy, onClick = {
-                    busy = true
-                    scope.launch {
-                        c.explorer.openList(e).onFailure { Toast.makeText(ctx, errorText(ctx, it), Toast.LENGTH_LONG).show() }
-                        busy = false
+            if (Lists.hasPrivate(e)) Group {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Lock, null, tint = Ts.colors.lock, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text(stringResource(R.string.list_private), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    if (priv != null) Badge(priv.size.toString())
+                }
+                when {
+                    priv != null -> if (priv.isEmpty()) Text(stringResource(R.string.none), color = Ts.colors.muted) else priv.forEach { TagRow(it) }
+                    !account.canSign -> Text(stringResource(R.string.readonly_cannot_decrypt), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+                    else -> Button(enabled = !busy, onClick = { decrypt() }, modifier = Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.decrypt)) }
+                }
+            }
+            if (account.canSign) OutlinedButton(enabled = !busy, onClick = {
+                if (needsDecrypt) decrypt { startEdit(c.explorer.state.value.listPrivate[e.address].orEmpty()) } else startEdit(priv.orEmpty())
+            }) { Text(stringResource(R.string.edit)) }
+            Text(stringResource(R.string.lists_edit_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text(stringResource(R.string.lists_edit_rules), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+            listOf(false, true).forEach { isPriv ->
+                Group {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isPriv) { Icon(Icons.Outlined.Lock, null, tint = Ts.colors.lock, modifier = Modifier.size(18.dp)); Spacer(Modifier.size(6.dp)) }
+                        Text(
+                            if (isPriv) stringResource(R.string.list_private) else stringResource(R.string.list_public, d.count { !it.private }),
+                            fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f),
+                        )
+                        if (isPriv) TextButton(onClick = { adding = -1 }) { Text("+ " + stringResource(R.string.add)) }
                     }
-                }, modifier = Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.decrypt)) }
+                    val rows = d.withIndex().filter { it.value.private == isPriv }
+                    if (rows.isEmpty()) Text(stringResource(R.string.none), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+                    rows.forEach { (i, item) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f)) { TagRow(item.tag) }
+                            if (isPriv) TextButton(onClick = { adding = i }) { Text(stringResource(R.string.edit)) }
+                            else TextButton(onClick = { draft = d.toMutableList().also { l -> l[i] = item.copy(private = true) } }) { Text(stringResource(R.string.make_private)) }
+                            IconButton(onClick = { draft = d.filterIndexed { j, _ -> j != i } }) { Icon(Icons.Outlined.Close, stringResource(R.string.remove)) }
+                        }
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                TextButton(onClick = { draft = null }) { Text(stringResource(R.string.cancel)) }
+                Button(onClick = { confirm = true }) { Text(stringResource(R.string.save)) }
             }
         }
-        Text(stringResource(R.string.lists_readonly_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
     }
+
+    adding?.let { idx ->
+        val d = draft ?: return@let
+        TagDialog(
+            kind = e.kind,
+            initial = if (idx >= 0) d[idx].tag else null,
+            onDismiss = { adding = null },
+            onSave = { t -> draft = if (idx >= 0) d.toMutableList().also { it[idx] = EditItem(t, true) } else d + EditItem(t, true); adding = null },
+        )
+    }
+
+    if (confirm) AlertDialog(
+        onDismissRequest = { confirm = false },
+        title = { Text(stringResource(R.string.save_title)) },
+        text = { Text(stringResource(R.string.save_list_body)) },
+        confirmButton = {
+            TextButton(onClick = {
+                confirm = false
+                val d = draft ?: return@TextButton
+                busy = true
+                scope.launch {
+                    c.explorer.saveList(e, d.filter { !it.private }.map { it.tag }, d.filter { it.private }.map { it.tag })
+                        .onSuccess { Toast.makeText(ctx, R.string.saved, Toast.LENGTH_SHORT).show(); draft = null }
+                        .onFailure { Toast.makeText(ctx, errorText(ctx, it), Toast.LENGTH_LONG).show() }
+                    busy = false
+                }
+            }) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.cancel)) } },
+    )
+    if (busy) BusyDialog(c)
+}
+
+/** Añadir o editar un elemento privado: tipo de etiqueta, valor y datos extra opcionales. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagDialog(kind: Int, initial: List<String>?, onDismiss: () -> Unit, onSave: (List<String>) -> Unit) {
+    val suggested = Lists.suggestedTags(kind)
+    var name by remember { mutableStateOf(initial?.get(0) ?: suggested.first()) }
+    var value by remember { mutableStateOf(initial?.getOrNull(1) ?: "") }
+    var extra by remember { mutableStateOf(initial?.drop(2)?.joinToString(" · ") ?: "") }
+    var error by remember { mutableStateOf<String?>(null) }
+    val badNpub = stringResource(R.string.npub_invalid)
+    val badRelay = stringResource(R.string.relay_invalid)
+    val empty = stringResource(R.string.value_empty)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (initial == null) R.string.item_add else R.string.item_edit)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (suggested + listOf(name)).distinct().forEach { t ->
+                        androidx.compose.material3.FilterChip(selected = name == t, onClick = { name = t }, label = { Text(t, fontFamily = FontFamily.Monospace) })
+                    }
+                }
+                OutlinedTextField(value = name, onValueChange = { name = it.trim() }, singleLine = true, label = { Text(stringResource(R.string.item_tag)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = value, onValueChange = { value = it; error = null }, label = { Text(stringResource(R.string.item_value)) },
+                    placeholder = { Text(hintFor(name)) }, isError = error != null, supportingText = { error?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(value = extra, onValueChange = { extra = it }, singleLine = true, label = { Text(stringResource(R.string.item_extra)) }, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val v = value.trim()
+                val norm = when {
+                    v.isEmpty() -> { error = empty; null }
+                    name == "p" -> io.github.oluengo.tansu.nostr.Nip19.normalizePubkey(v) ?: run { error = badNpub; null }
+                    name == "relay" -> io.github.oluengo.tansu.nostr.RelayPool.normalize(v) ?: run { error = badRelay; null }
+                    else -> v
+                } ?: return@TextButton
+                if (name.isBlank()) return@TextButton
+                onSave(listOf(name, norm) + extra.split("·").map { it.trim() }.filter { it.isNotEmpty() })
+            }) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+private fun hintFor(tag: String): String = when (tag) {
+    "p" -> "npub1… / hex"
+    "e" -> "id (hex)"
+    "a" -> "kind:pubkey:d"
+    "t" -> "nostr"
+    "relay", "r" -> "wss://…"
+    "server" -> "https://…"
+    "word" -> "spam"
+    "emoji" -> "shortcode"
+    else -> ""
 }
 
 // ---------- Archivo (dato de app) ----------

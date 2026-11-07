@@ -125,6 +125,25 @@ class Explorer(
         refresh()
     }
 
+    /** Guarda una lista NIP-51 editada (privados cifrados; públicos solo se quitan). Copia la anterior a la papelera. */
+    suspend fun saveList(e: Event, public: List<List<String>>, private: List<List<String>>): Result<Unit> = attempt {
+        val a = account()
+        if (!a.canSign) throw VaultException(VaultException.Reason.READ_ONLY)
+        val snap = _state.value.snapshot ?: throw VaultException(VaultException.Reason.OFFLINE)
+        // Si tenía parte privada, hay que haberla descifrado antes para no perderla.
+        if (Lists.hasPrivate(e) && _state.value.listPrivate[e.address] == null) throw VaultException(VaultException.Reason.UNREADABLE)
+        val label = e.tag("title") ?: e.tag("d")?.takeIf { it.isNotEmpty() } ?: "kind ${e.kind}"
+        trash.add(a.pubkey, label, listOf(e))
+        val saved = vault.writeList(signer.crypto(a), snap.relays, e, public, private)
+        val lists = snap.lists.map { if (it.address == e.address) saved else it }
+        _state.update {
+            it.copy(
+                load = Load.Ready(snap.copy(lists = lists)).also { r -> cache[a.pubkey] = r.snapshot },
+                listPrivate = it.listPrivate + (saved.address to private),
+            )
+        }
+    }
+
     /** Copia la entrada a otra cuenta: se descifra con esta y se vuelve a cifrar para la otra. */
     suspend fun copyTo(entry: Entry, target: Account): Result<Unit> = attempt {
         if (!target.canSign) throw VaultException(VaultException.Reason.READ_ONLY)

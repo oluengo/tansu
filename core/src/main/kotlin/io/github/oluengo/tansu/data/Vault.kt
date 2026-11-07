@@ -23,7 +23,7 @@ interface AccountCrypto {
 }
 
 class VaultException(val reason: Reason, cause: Throwable? = null) : Exception(reason.name, cause) {
-    enum class Reason { NEEDS_SIGNER, READ_ONLY, OFFLINE, UNREADABLE, TOO_BIG, NOT_ENCRYPTED }
+    enum class Reason { NEEDS_SIGNER, READ_ONLY, OFFLINE, UNREADABLE, TOO_BIG, NOT_ENCRYPTED, WOULD_PUBLISH }
 }
 
 /** Lo que hay en Nostr para una cuenta. */
@@ -140,6 +140,27 @@ class Vault(private val pool: RelayPool) {
         return out
     }
 
+    /**
+     * Guarda una lista NIP-51 editada: mismas etiquetas de cabecera (d, title…), los públicos que queden
+     * (solo se pueden quitar, nunca añadir) y los privados cifrados con NIP-44 para la propia cuenta.
+     */
+    suspend fun writeList(
+        crypto: AccountCrypto, relays: List<String>, original: Event,
+        public: List<List<String>>, private: List<List<String>>,
+    ): Event {
+        if (original.pubkey != crypto.pubkey) throw VaultException(VaultException.Reason.READ_ONLY)
+        if (!Lists.onlyRemovesPublic(original, public)) throw VaultException(VaultException.Reason.WOULD_PUBLISH)
+        val content = if (private.isEmpty()) "" else {
+            val plain = Lists.privateJson(private)
+            if (plain.toByteArray().size > 65_000) throw VaultException(VaultException.Reason.TOO_BIG)
+            val enc = crypto.nip44Encrypt(plain, crypto.pubkey) ?: throw VaultException(VaultException.Reason.NEEDS_SIGNER)
+            if (detectEncoding(enc) != Encoding.NIP44) throw VaultException(VaultException.Reason.NOT_ENCRYPTED)
+            enc
+        }
+        val at = maxOf(now(), original.createdAt + 1)
+        return publish(crypto, relays, EventSigning.unsigned(crypto.pubkey, original.kind, Lists.metaTags(original) + public, content, at))
+    }
+
     /** Petición de borrado (NIP-09) de todos los eventos de la entrada. */
     suspend fun delete(crypto: AccountCrypto, relays: List<String>, entry: Entry): Event =
         publish(crypto, relays, EventSigning.unsigned(crypto.pubkey, Kinds.DELETION, AppData.deletionTags(entry.events), ""))
@@ -151,7 +172,8 @@ class Vault(private val pool: RelayPool) {
     suspend fun republish(crypto: AccountCrypto, relays: List<String>, events: List<Event>): List<Event> {
         val at = now()
         return events.map { e ->
-            if (detectEncoding(e.content) != Encoding.NIP44) throw VaultException(VaultException.Reason.NOT_ENCRYPTED)
+            // Nunca se vuelve a publicar contenido legible (las listas pueden ir sin contenido).
+            if (detectEncoding(e.content) == Encoding.PLAIN) throw VaultException(VaultException.Reason.NOT_ENCRYPTED)
             publish(crypto, relays, EventSigning.unsigned(crypto.pubkey, e.kind, e.tags, e.content, at))
         }
     }

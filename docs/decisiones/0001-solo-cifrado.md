@@ -9,7 +9,7 @@ Tansu es para gestionar copias de seguridad y datos privados. **Todo lo que publ
 - Editar solo se permite en datos ya cifrados con NIP-44. Lo que está sin cifrar se ve (con aviso) pero no se toca.
 - Antes de publicar se comprueba que el firmante devolvió texto NIP-44; si no, no se publica nada.
 - Borrar es una petición NIP-09 (kind 5), que no tiene contenido.
-- Las listas NIP-51 se leen; editarlas llegará más adelante sin publicar nunca la parte privada en claro.
+- Listas NIP-51 (desde 0.2): lo que se añade o edita va siempre a la parte privada, cifrada con NIP-44. Los elementos públicos existentes solo se pueden quitar o pasar a privados; si una lista guardada añadiera algo público, no se publica. Si la lista tenía parte privada, hay que descifrarla antes de editar para no perderla.
 
 ## Motivo
 

@@ -116,6 +116,17 @@ class AppDataTest {
         assertNull(Lists.parsePrivate("no"))
     }
 
+    @Test fun editarListaSinHacerNadaPublico() {
+        val e = EventSigning.sign(30003, listOf(listOf("d", "leer"), listOf("title", "Para leer"), listOf("e", "x1"), listOf("t", "nostr")), "", sk, 10)
+        assertEquals(listOf(listOf("d", "leer"), listOf("title", "Para leer")), Lists.metaTags(e))
+        assertTrue(Lists.onlyRemovesPublic(e, listOf(listOf("t", "nostr"))))
+        assertTrue(Lists.onlyRemovesPublic(e, emptyList()))
+        assertFalse(Lists.onlyRemovesPublic(e, listOf(listOf("t", "nostr"), listOf("p", "nuevo"))))
+        assertFalse(Lists.onlyRemovesPublic(e, listOf(listOf("t", "nostr"), listOf("t", "nostr"))))
+        val priv = listOf(listOf("p", "abc", "wss://r"), listOf("word", "spam"))
+        assertEquals(priv, Lists.parsePrivate(Lists.privateJson(priv)))
+    }
+
     @Test fun papelera() {
         val f = File.createTempFile("trash", ".json").also { it.delete() }
         val t = Trash(f)

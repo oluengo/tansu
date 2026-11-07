@@ -33,8 +33,10 @@ Explorador tipo gestor de archivos para los datos privados que las apps de Nostr
 | Copiar a otra cuenta | Se vuelve a cifrar para la cuenta de destino |
 | Eliminar | NIP-09 (kind 5) con `e` y `a` de todos los eventos; antes, copia en la papelera |
 | Restaurar | Republica los eventos cifrados con fecha nueva |
+| Editar listas NIP-51 | Privados: añadir, editar, quitar (cifrados con NIP-44). Públicos: quitar o hacer privados. Nunca se añade nada público |
 
 ## Fases
 
 - **0.1 (beta):** todo lo anterior; listas en solo lectura.
-- **Siguiente:** editar listas NIP-51 (solo la parte privada, cifrada), importar un archivo como nueva entrada, comparar versiones, aviso de copias antiguas.
+- **0.2 (beta):** editar listas NIP-51 sin hacer nada público. Firma propia de Tansu.
+- **Siguiente:** crear listas privadas nuevas, importar un archivo como nueva entrada, comparar versiones, aviso de copias antiguas.

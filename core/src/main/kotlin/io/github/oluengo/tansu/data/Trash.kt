@@ -22,8 +22,11 @@ class Trash(private val file: File) {
 
     fun of(pubkey: String): List<TrashItem> = all().filter { it.pubkey == pubkey }
 
-    fun add(pubkey: String, entry: Entry): TrashItem = synchronized(lock) {
-        val item = TrashItem(entry.main.id.take(16) + System.currentTimeMillis(), pubkey, entry.d, System.currentTimeMillis(), entry.events)
+    fun add(pubkey: String, entry: Entry): TrashItem = add(pubkey, entry.d, entry.events)
+
+    /** [label]: lo que se muestra (etiqueta d o nombre de la lista). */
+    fun add(pubkey: String, label: String, events: List<Event>): TrashItem = synchronized(lock) {
+        val item = TrashItem(events.last().id.take(16) + System.currentTimeMillis(), pubkey, label, System.currentTimeMillis(), events)
         write((listOf(item) + read()).take(MAX))
         item
     }

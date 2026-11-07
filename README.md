@@ -20,7 +20,7 @@ Explorador de los datos que tus apps de Nostr guardan en tu cuenta: copias de se
 - **Copias por partes** (formato de Usus: índice + partes comprimidas): se ven como un solo archivo.
 - **Descifrar, ver, editar** (JSON validado), **exportar a archivo**, **copiar a otra cuenta** (se vuelve a cifrar para ella) y **eliminar** (NIP-09).
 - **Papelera local**: antes de borrar o sobrescribir se guarda una copia (cifrada) para poder restaurarla.
-- **Listas NIP-51** en solo lectura, también la parte privada.
+- **Listas NIP-51**: ver (también la parte privada) y editar. Lo nuevo siempre va a la parte privada, cifrada; lo público solo se puede quitar o hacer privado.
 - Tema claro/oscuro/auto, color de acento, tres idiomas y relays editables.
 
 ## Instalar la beta
@@ -29,6 +29,9 @@ La beta se instala como otra app, **Tansu Beta**, con sus propios datos. Puede t
 
 - **Obtainium:** añade `https://github.com/oluengo/tansu` y activa «incluir pre-releases».
 - **Directo:** descarga el APK de la [pre-release Tansu Beta](https://github.com/oluengo/tansu/releases/tag/tansu-beta).
+
+Comprueba que la huella del certificado coincide (también está en Ajustes → Acerca de):
+`E3:71:51:7A:B8:5F:4F:82:3C:D5:7D:79:9B:DF:11:72:E3:3D:C9:96:B2:FF:9D:4E:9B:F5:F6:BA:1E:D1:77:99`
 
 ## Desarrollo
 

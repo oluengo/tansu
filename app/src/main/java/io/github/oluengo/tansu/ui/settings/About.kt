@@ -63,6 +63,9 @@ private val DONATIONS = listOf(
     Donation("Lightning / zaps", "oluengo@rizful.com", Color(0xFF7B3FE4), "⚡", Color(0xFFFFD43B)),
 )
 
+/** Huella SHA-256 del certificado con el que se firman las versiones publicadas (beta y normal). */
+const val SIGN_FP = "E3:71:51:7A:B8:5F:4F:82:3C:D5:7D:79:9B:DF:11:72:E3:3D:C9:96:B2:FF:9D:4E:9B:F5:F6:BA:1E:D1:77:99"
+
 /** Texto legal válido: el original en inglés (igual que LICENSE). */
 
 private const val MIT_TEXT = """MIT License
@@ -123,6 +126,8 @@ fun AboutSection() {
                         .background(MaterialTheme.colorScheme.background, RoundedCornerShape(8.dp))
                         .horizontalScroll(rememberScrollState()).padding(10.dp),
                 )
+                Text(stringResource(R.string.about_fingerprint), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+                Text(SIGN_FP, fontFamily = FontFamily.Monospace, fontSize = 10.sp, lineHeight = 13.sp, color = Ts.colors.muted)
                 if (ctx.resources.configuration.locales[0].language != "en") {
                     Text(stringResource(R.string.about_legal_english), color = Ts.colors.muted, fontSize = 11.sp)
                 }

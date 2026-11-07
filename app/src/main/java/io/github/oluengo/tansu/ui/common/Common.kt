@@ -127,6 +127,7 @@ fun errorText(ctx: Context, e: Throwable?): String = ctx.getString(
         VaultException.Reason.UNREADABLE -> R.string.err_unreadable
         VaultException.Reason.TOO_BIG -> R.string.err_too_big
         VaultException.Reason.NOT_ENCRYPTED -> R.string.err_not_encrypted
+        VaultException.Reason.WOULD_PUBLISH -> R.string.err_would_publish
         VaultException.Reason.OFFLINE, null -> R.string.err_offline
     }
 )

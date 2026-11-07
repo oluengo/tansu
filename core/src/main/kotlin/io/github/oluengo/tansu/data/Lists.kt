@@ -8,7 +8,11 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
-/** Listas NIP-51: estándar (10000…) y conjuntos con nombre (30000…). En esta versión solo se leen. */
+/**
+ * Listas NIP-51: estándar (10000…) y conjuntos con nombre (30000…).
+ * Al editar, nada pasa a ser público: los elementos privados van cifrados (NIP-44) y los públicos
+ * solo se pueden quitar o hacer privados (ver docs/decisiones/0001).
+ */
 object Lists {
     /** Tipos que se buscan, con una clave de texto para la UI. */
     val KINDS = linkedMapOf(
@@ -30,6 +34,37 @@ object Lists {
     fun publicItems(e: Event): List<List<String>> = e.tags.filter { it.size > 1 && it[0] !in META }
 
     fun hasPrivate(e: Event): Boolean = e.content.isNotBlank()
+
+    /** Etiquetas de la lista que no son elementos (d, title…): se conservan al guardar. */
+    fun metaTags(e: Event): List<List<String>> = e.tags.filter { it.isNotEmpty() && (it.size < 2 || it[0] in META) }
+
+    /** Texto (sin cifrar) de la parte privada: array JSON de etiquetas. */
+    fun privateJson(items: List<List<String>>): String =
+        kotlinx.serialization.json.JsonArray(items.map { t -> kotlinx.serialization.json.JsonArray(t.map { kotlinx.serialization.json.JsonPrimitive(it) }) }).toString()
+
+    /** true si [public] no añade nada público respecto a la lista original (solo quita). */
+    fun onlyRemovesPublic(original: Event, public: List<List<String>>): Boolean {
+        val before = publicItems(original).toMutableList()
+        return public.all { before.remove(it) }
+    }
+
+    /** Etiquetas que se suelen usar en cada tipo de lista, para el selector al añadir. */
+    fun suggestedTags(kind: Int): List<String> = when (kind) {
+        10000 -> listOf("p", "t", "word", "e")
+        10001 -> listOf("e")
+        10003, 30003 -> listOf("e", "a", "t", "r")
+        10004 -> listOf("a")
+        10005 -> listOf("e")
+        10006, 10007, 10050, 30002 -> listOf("relay")
+        10009 -> listOf("group", "r")
+        10015, 30015 -> listOf("t", "a")
+        10030, 30030 -> listOf("emoji", "a")
+        10063 -> listOf("server")
+        30000 -> listOf("p")
+        30004 -> listOf("a", "e")
+        30005 -> listOf("e")
+        else -> listOf("p", "e", "a", "t", "r")
+    }
 
     /** Contenido privado ya descifrado: un array JSON de etiquetas. null si no lo es. */
     fun parsePrivate(plain: String): List<List<String>>? = runCatching {

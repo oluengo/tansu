@@ -1,7 +1,7 @@
 // Beta (TANSU_BETA=1, rama beta en CI): otra app, «Tansu Beta» (io.github.oluengo.tansu.beta),
 // versión X.Y.Z-beta.N y código versionCode·1000 + N. Se instala junto a la normal, con sus propios datos.
-val tansuVersion = "0.1.0"
-val tansuCode = 1
+val tansuVersion = "0.2.0"
+val tansuCode = 2
 val beta = System.getenv("TANSU_BETA") == "1"
 val betaN = (System.getenv("TANSU_BETA_N") ?: "0").toInt()
 
