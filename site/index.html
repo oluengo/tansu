@@ -46,7 +46,10 @@ code { font: .86em var(--mono); background: var(--accent-bg); padding: .1rem .35
 .lang button, .theme { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: .25rem .4rem; border-radius: 6px; }
 .lang button[aria-pressed="true"] { color: var(--ink); font-weight: 600; background: var(--accent-bg); }
 .theme svg { width: 1.1rem; height: 1.1rem; display: block; }
-.i-sun { display: none; } :root[data-theme="dark"] .i-sun { display: block; } :root[data-theme="dark"] .i-moon { display: none; }
+/* Solo uno a la vez: luna en claro (pasar a oscuro), sol en oscuro (pasar a claro). */
+.theme .i-sun { display: none; }
+:root[data-theme="dark"] .theme .i-sun { display: block; }
+:root[data-theme="dark"] .theme .i-moon { display: none; }
 @media (max-width: 640px) { .top nav .nl { display: none; } }
 
 .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 3rem; align-items: center; padding: 3rem 0 1rem; }
