@@ -75,8 +75,12 @@ try {
   await page.click("text=backup");
   ok(await page.locator(`text=${parts.length} partes`).count() > 0, "la copia de Usus se ve como un archivo con partes");
   await page.click("button:text('Descifrar')");
+  await page.waitForSelector(".jv");
+  ok(await page.locator(".jv .jsec summary", { hasText: "Sessions" }).count() === 1, "vista visual por defecto (sección Sessions)");
+  ok(await page.locator(".jv button:text('Ver las 4000 filas')").count() === 1, "tabla larga con «Ver las N filas»");
+  await page.click("[data-a=view][data-x=code]");
   await page.waitForSelector("pre.content");
-  ok((await page.textContent("pre.content")).includes('"sessions"'), "contenido descifrado y descomprimido");
+  ok((await page.textContent("pre.content")).includes('"sessions"'), "vista código: contenido descifrado y descomprimido");
   ok(await page.locator("dd:text-is('Oscar')").count() === 1, "datos del índice (perfil)");
   await page.screenshot({ path: "/tmp/web-3-archivo.png" });
   await page.click("button:text('Editar')");
