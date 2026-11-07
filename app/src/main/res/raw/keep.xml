@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Los nombres de listas NIP-51 se buscan por nombre (list_<tipo>): que no los quite el reductor de recursos. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/list_*" />

@@ -1,0 +1,58 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "kotlin-error",
+      "pattern": [
+        {
+          "regexp": "^e: file://(.+?):(\\d+):(\\d+) (.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        }
+      ]
+    },
+    {
+      "owner": "aapt-error",
+      "pattern": [
+        {
+          "regexp": "^ERROR: (.+?):(\\d+): (.+)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        }
+      ]
+    },
+    {
+      "owner": "test-failure",
+      "pattern": [
+        {
+          "regexp": "^(\\S+Test) > (.+) FAILED$",
+          "message": 2,
+          "code": 1
+        }
+      ]
+    },
+    {
+      "owner": "gradle-what-went-wrong",
+      "pattern": [
+        {
+          "regexp": "^\\* What went wrong:$"
+        },
+        {
+          "regexp": "^(.+)$",
+          "message": 1
+        }
+      ]
+    },
+    {
+      "owner": "gradle-cause",
+      "pattern": [
+        {
+          "regexp": "^(?:> (?!Task )|Caused by: )(.*(?:[Kk]eystore|password|alias|[Ss]igning|tampered|key).*)$",
+          "message": 1
+        }
+      ]
+    }
+  ]
+}

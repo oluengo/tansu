@@ -1,0 +1,209 @@
+# Compila Tansu (APK de Android).
+# - Push a main / pull request: tests, traducciones y APK en «Artifacts».
+# - Push a la rama beta: «Tansu Beta», otra app (io.github.oluengo.tansu.beta) con sus propios datos,
+#   versión X.Y.Z-beta.N. Se publica como pre-release «Tansu Beta» (etiqueta tansu-beta, se rehace en cada push).
+# - Etiqueta v* (p. ej. v0.1.0, igual que tansuVersion en app/build.gradle.kts): Release con el APK firmado.
+#   De ahí lo recogen Obtainium y Zapstore.
+# Firma: secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# (los mismos nombres que en Usus y Wavestr). Sin ellos se genera un APK de depuración y no se publica nada.
+name: Build
+
+on:
+  push:
+    branches: [main, beta]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Publicar versión (crea la etiqueta vX.Y.Z y la Release con el APK; solo desde main)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TANSU_BETA: ${{ github.ref == 'refs/heads/beta' && '1' || '' }}
+      TANSU_BETA_N: ${{ github.run_number }}
+      # Versión normal: etiqueta v* empujada o «Publicar versión» desde Actions (en main).
+      RELEASE: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main')) && 'true' || '' }}
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      version: ${{ steps.v.outputs.version }}
+      signed: ${{ steps.key.outputs.signed }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Errores de compilación como anotaciones
+        run: echo "::add-matcher::.github/kotlin-matcher.json"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Comprobar traducciones (ca/es/en)
+        run: python3 scripts/check_strings.py
+
+      - name: Tests unitarios
+        run: ./gradlew :core:test testDebugUnitTest --stacktrace
+
+      - name: Versión
+        id: v
+        run: |
+          v="$(sed -n 's/^val tansuVersion = "\(.*\)"/\1/p' app/build.gradle.kts)"
+          if [ "$TANSU_BETA" = "1" ]; then
+            echo "version=$v-beta.$TANSU_BETA_N" >> "$GITHUB_OUTPUT"; echo "file=tansu-beta" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$v" >> "$GITHUB_OUTPUT"; echo "file=tansu" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "$TANSU_BETA" = "1" ]; then echo "tag=tansu-beta" >> "$GITHUB_OUTPUT"; elif [ "$RELEASE" = "true" ]; then echo "tag=v$v" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Comprobar que la etiqueta coincide con la versión
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          if [ "${GITHUB_REF_NAME#v}" != "${{ steps.v.outputs.version }}" ]; then
+            echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con tansuVersion ${{ steps.v.outputs.version }}"; exit 1
+          fi
+
+      - name: Clave de firma
+        id: key
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/tansu.jks"
+            echo "TANSU_KEYSTORE=$RUNNER_TEMP/tansu.jks" >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Sin clave de firma: se genera un APK de depuración y no se publica nada."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compilar (firmado)
+        if: steps.key.outputs.signed == 'true'
+        env:
+          TANSU_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          TANSU_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          TANSU_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for v in TANSU_KEYSTORE_PASSWORD TANSU_KEY_ALIAS TANSU_KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secret de firma correspondiente a $v"; exit 1; fi
+          done
+          # Diagnóstico sin mostrar secretos: tamaño y tipo del archivo, si abre la contraseña y qué alias contiene.
+          echo "Keystore: $(stat -c %s "$TANSU_KEYSTORE") bytes · $(file -b "$TANSU_KEYSTORE" | cut -c1-60)"
+          if ! keytool -list -keystore "$TANSU_KEYSTORE" -storepass "$TANSU_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/kt.out" 2>&1; then
+            echo "::error::ANDROID_KEYSTORE_PASSWORD no abre el keystore (o ANDROID_KEYSTORE_BASE64 no es un keystore válido): $(grep -i 'error' "$RUNNER_TEMP/kt.out" | head -c 300)"; exit 1
+          fi
+          aliases=$(grep -iE 'PrivateKeyEntry' "$RUNNER_TEMP/kt.out" | cut -d, -f1 | tr '\n' ' ')
+          if ! keytool -list -keystore "$TANSU_KEYSTORE" -storepass "$TANSU_KEYSTORE_PASSWORD" -alias "$TANSU_KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error::ANDROID_KEY_ALIAS no coincide. Alias en el keystore: $aliases"; exit 1
+          fi
+          ./gradlew assembleRelease --stacktrace
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/${{ steps.v.outputs.file }}-${{ steps.v.outputs.version }}.apk"
+
+      - name: Compilar (depuración)
+        if: steps.key.outputs.signed != 'true'
+        run: |
+          ./gradlew assembleDebug --stacktrace
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/${{ steps.v.outputs.file }}-${{ steps.v.outputs.version }}-debug.apk"
+
+      # Sin clave, comprobamos igualmente que la versión release (con R8) compila.
+      - name: Comprobar release (R8, sin firmar)
+        if: steps.key.outputs.signed != 'true'
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Huella SHA-256 del certificado
+        if: steps.key.outputs.signed == 'true'
+        run: |
+          f=$(ls dist/*.apk); bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$bt/apksigner" verify --print-certs "$f" | grep -i sha-256 | tee dist/firma-sha256.txt
+          rm -f "$RUNNER_TEMP/tansu.jks"
+
+      - name: Permisos del APK
+        run: |
+          f=$(ls dist/*.apk); bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$bt/aapt2" dump permissions "$f" | tee dist/permisos.txt
+          if grep -E "STORAGE|LOCATION|CAMERA|RECORD_AUDIO|CONTACTS" dist/permisos.txt; then echo "::error::Permiso no esperado"; exit 1; fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.v.outputs.file }}-${{ steps.v.outputs.version }}-android
+          path: dist/
+          if-no-files-found: error
+
+  # Prueba de arranque del APK en un emulador: instala, abre y comprueba que no se cierra.
+  android-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: "*-android"
+          merge-multiple: true
+          path: dist
+      - name: Activar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Arrancar en el emulador (Android 14)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./scripts/android_smoke.sh
+
+
+  publish:
+    needs: [build, android-smoke]
+    if: needs.build.outputs.tag != '' && needs.build.outputs.signed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: "*-android"
+          merge-multiple: true
+          path: dist
+      - name: Release de GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          ls -la dist
+          files=$(ls dist/*.apk)
+          if [ "$TAG" = "tansu-beta" ]; then
+            # Beta: una sola pre-release «Tansu Beta» que se rehace en cada push; no cuenta como última versión.
+            gh release delete tansu-beta --cleanup-tag --yes || true
+            printf '%s\n\n%s\n' "**Versión de pruebas** $VERSION · $(git log -1 --format=%s)" \
+              "Se instala como otra app, «Tansu Beta», con sus propios datos: no toca la Tansu normal. Puede tener fallos." > notas.md
+            gh release create tansu-beta $files --prerelease --target "$GITHUB_SHA" --title "Tansu Beta $VERSION" --notes-file notas.md
+          else
+            awk -v v="$VERSION" '$0 ~ "^## " v {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notas.md
+            printf '\n---\nHuella del certificado: `%s`\n' "$(sed 's/.*: //' dist/firma-sha256.txt)" >> notas.md
+            if gh release view "$TAG" > /dev/null 2>&1; then
+              gh release upload "$TAG" $files --clobber
+              gh release edit "$TAG" --title "Tansu $VERSION" --notes-file notas.md
+            else
+              gh release create "$TAG" $files --target "$GITHUB_SHA" --title "Tansu $VERSION" --notes-file notas.md --latest
+            fi
+          fi
