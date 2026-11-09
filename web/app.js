@@ -1,9 +1,9 @@
 /* Tansu web: lo mismo que la app Android, en el navegador (PWA opcional).
-   - Cuentas: Amber (NIP-55 por enlace, en Android), extensión (NIP-07), bunker (NIP-46) o npub en solo lectura.
-     Nunca se ve ni se guarda una nsec.
+   - Cuentas: Amber (como firmante remoto NIP-46 con nostrconnect://, en Android), extensión (NIP-07),
+     bunker (NIP-46) o npub en solo lectura. Nunca se ve ni se guarda una nsec.
    - Todo lo que se publica va cifrado con NIP-44 para la propia cuenta (docs/decisiones/0001).
-   - Con Amber cada paso abre Amber y vuelve a Tansu (recargando la página), así que cada operación se guarda
-     antes de empezar y se repite al volver: los pasos ya hechos se toman de la caché y se sigue por el siguiente. */
+   - Lo descifrado solo vive en memoria: nunca se guarda en el navegador ni pasa por la dirección de la página.
+     (Por eso Amber no usa NIP-55 por enlace en la web: devolvía el texto descifrado en la URL, que queda en el historial.) */
 "use strict";
 const N = window.TansuNostr, I18N = window.TANSU_I18N;
 const $ = s => document.querySelector(s);
@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.3.0" + (BETA ? " beta" : "");
+const VERSION = "0.3.1" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -82,7 +82,7 @@ const avatar = (a, cls = "") => {
   return `<span class="av ${cls}" style="background-color:${avColor(a.pubkey)}${pic}">${pic ? "" : esc(name[0]?.toUpperCase() || "?")}</span>`;
 };
 const methodLabel = m => T({ amber: "method_amber", nip07: "method_nip07", bunker: "method_bunker", read: "method_readonly" }[m]);
-const canSign = a => a && a.method !== "read";
+const canSign = a => !!a && a.method !== "read" && (a.method === "nip07" || !!(a.bp && a.sk));
 const ago = sec => {
   const d = sec * 1000 - Date.now(), rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
   const abs = Math.abs(d) / 1000;
@@ -162,7 +162,6 @@ const SUGGESTED = k => ({ 10000: ["p", "t", "word", "e"], 10001: ["e"], 10003: [
 
 // ---------- Errores ----------
 class TErr extends Error { constructor(code) { super(code); this.code = code; } }
-class AmberAway extends Error { constructor() { super("amber"); } }
 function errText(e) {
   const c = e?.code || e?.message || "";
   if (c === "nip07") return T("nip07_missing");
@@ -172,64 +171,14 @@ function errText(e) {
     notenc: "err_not_encrypted", public: "err_would_publish" }[c] || (/reject|denied|cancel|firma/i.test(c) ? "err_signer" : "err_offline"));
 }
 
-// ---------- Amber (NIP-55 por enlace) ----------
-// Cada petición abre Amber con callbackUrl; Amber vuelve a esta página con el resultado en la URL.
-// Los resultados se guardan (localStorage, solo durante la operación) y la operación se repite desde el principio.
-const AMBER_RES = P + "amber.res", AMBER_REQ = P + "amber.req", OP = P + "op";
-const Amber = {
-  async call(type, content, extra = {}) {
-    const k = await sha(type + "|" + (extra.pubkey || "") + "|" + (extra.current || "") + "|" + content);
-    const res = LS.get(AMBER_RES, {});
-    if (res[k] != null) return res[k];
-    const id = Math.random().toString(36).slice(2, 10);
-    LS.set(AMBER_REQ, { id, k, type });
-    LS.set(P + "route", st.route); // para volver a la misma pantalla
-    const cb = location.origin + location.pathname + "?amber=" + id + "&result=";
-    const q = new URLSearchParams({ compressionType: "none", returnType: type === "sign_event" ? "event" : "signature", type, appName: "Tansu" });
-    if (extra.pubkey) q.set("pubkey", extra.pubkey);
-    if (extra.current) q.set("current_user", extra.current);
-    if (type === "get_public_key") q.set("permissions", JSON.stringify([{ type: "sign_event", kind: 30078 }, { type: "sign_event", kind: 5 }, { type: "nip44_encrypt" }, { type: "nip44_decrypt" }, { type: "nip04_decrypt" }]));
-    location.href = `nostrsigner:${encodeURIComponent(content)}?${q}&callbackUrl=${encodeURIComponent(cb)}`;
-    throw new AmberAway();
-  },
-  /** Al volver de Amber: guarda el resultado y limpia la URL. true si había resultado. */
-  collect() {
-    const u = new URL(location.href), id = u.searchParams.get("amber");
-    if (!id) return false;
-    const href = location.href, i = href.indexOf("&result=");
-    let r = i >= 0 ? href.slice(i + 8) : "";
-    try { r = decodeURIComponent(r); } catch {}
-    const req = LS.get(AMBER_REQ, null);
-    if (req && req.id === id && r) { const res = LS.get(AMBER_RES, {}); res[req.k] = r; LS.set(AMBER_RES, res); }
-    LS.del(AMBER_REQ);
-    history.replaceState(null, "", location.pathname);
-    return !!r;
-  },
-  clear() { LS.del(AMBER_RES); LS.del(AMBER_REQ); },
-  signer(a) {
-    const current = npub(a.pubkey);
-    return {
-      async sign(t) {
-        const ev = { kind: t.kind, created_at: t.created_at, tags: t.tags, content: t.content, pubkey: a.pubkey };
-        ev.id = N.eventHash(ev);
-        const r = await Amber.call("sign_event", JSON.stringify(ev), { current });
-        let out = null; try { out = JSON.parse(r); } catch {}
-        if (!out && /^[0-9a-f]{128}$/i.test(r)) out = { ...ev, sig: r };
-        if (!out || out.pubkey !== a.pubkey || !N.verify(out)) throw new TErr("signer");
-        return out;
-      },
-      enc44: (peer, text) => Amber.call("nip44_encrypt", text, { pubkey: peer, current }),
-      dec44: (peer, text) => Amber.call("nip44_decrypt", text, { pubkey: peer, current }),
-      dec04: (peer, text) => Amber.call("nip04_decrypt", text, { pubkey: peer, current }),
-    };
-  },
-};
+// Restos de la versión anterior (Amber por enlace NIP-55): se borran siempre al abrir.
+const LEGACY = [P + "amber.res", P + "amber.req", P + "op", P + "route"];
 const isAndroid = /Android/i.test(navigator.userAgent);
 const onAuth = url => { try { window.open(url, "_blank", "noopener"); } catch {} toast(T("bunker_auth"), 6000); };
 function signerOf(a) {
   if (!canSign(a)) throw new TErr("read");
-  if (a.method === "amber") return Amber.signer(a);
-  return N.signer(a, onAuth);
+  // Amber en la web va como bunker (nostrconnect), con su conexión guardada (bp/sk)
+  return N.signer(a.method === "amber" ? { ...a, method: "bunker" } : a, onAuth);
 }
 
 // ---------- Relays y lectura ----------
@@ -313,7 +262,7 @@ async function writeEntry(a, relays, d, text, manifest, oldParts, at) {
     if (encoding(enc) !== "nip44") throw new TErr("notenc");
     await publishSigned(s, relays, { kind: APP_DATA, created_at: at, tags: [["d", dd]], content: enc });
   }
-  if (extra.length) try { await publishSigned(s, relays, { kind: DELETION, created_at: at, tags: [...extra.map(x => ["a", `${APP_DATA}:${me}:${x}`]), ["k", String(APP_DATA)]], content: "" }); } catch (e) { if (e instanceof AmberAway) throw e; }
+  if (extra.length) try { await publishSigned(s, relays, { kind: DELETION, created_at: at, tags: [...extra.map(x => ["a", `${APP_DATA}:${me}:${x}`]), ["k", String(APP_DATA)]], content: "" }); } catch {}
 }
 
 // ---------- Papelera (IndexedDB; solo en este navegador) ----------
@@ -407,31 +356,17 @@ const OPS = {
     toast(T("restored"));
     if (a.pubkey === acc()?.pubkey) refresh();
   },
-  async loginAmber() {
-    const r = await Amber.call("get_public_key", "");
-    const pk = N.toHex(r);
-    if (!pk) throw new TErr("signer");
-    addAccount({ pubkey: pk, method: "amber" });
-  },
 };
-async function run(name, args = {}, quiet = false) {
-  const op = { name, args: { at: now(), tid: Math.random().toString(36).slice(2), ...args }, acct: st.active };
-  LS.set(OP, op);
-  return exec(op, quiet);
-}
-async function exec(op, quiet) {
-  if (!quiet) { st.busy = T("busy_signer"); render(); }
+async function run(name, args = {}) {
+  st.busy = T("busy_signer"); render();
   try {
-    await OPS[op.name](op.args);
-    LS.del(OP); Amber.clear();
+    await OPS[name]({ at: now(), tid: Math.random().toString(36).slice(2), ...args });
     return true;
   } catch (e) {
-    if (e instanceof AmberAway) return false;  // se sigue al volver de Amber
-    LS.del(OP); Amber.clear();
     toast(errText(e), 4500);
     return false;
   } finally {
-    if (!(document.hidden)) { st.busy = null; render(); }
+    st.busy = null; render();
   }
 }
 
@@ -448,6 +383,21 @@ function removeAccount(pk) {
   delete st.snaps[pk]; Object.keys(st.opened).forEach(k => k.startsWith(pk + "|") && delete st.opened[k]);
   if (st.active === pk) st.active = st.accounts[0]?.pubkey || null;
   saveAccounts(); st.route = st.accounts.length ? st.route : [{ v: "home" }]; render(); if (st.active) refresh();
+}
+/** Amber en la web: Tansu crea un enlace nostrconnect:// que abre Amber; Amber responde por relays (NIP-46). */
+let ncAbort = null;
+async function loginAmber() {
+  let uri = "";
+  dialog(`<h3>${T("login_amber")}</h3><div class="busy"><div class="spin"></div><div>${T("nc_waiting")}</div></div>
+    <div class="acts"><button class="btn" data-a="nccancel">${T("cancel")}</button><a id="nc-open" class="btn p" href="#">${T("nc_open")}</a></div>`);
+  const ctl = ncAbort = new AbortController();
+  try {
+    const r = await N.nostrConnect(u => { uri = u; const l = $("#nc-open"); if (l) l.href = u; try { location.href = u; } catch {} }, onAuth, ctl.signal);
+    if (ctl.signal.aborted) return;
+    addAccount({ pubkey: r.pubkey, method: "amber", bp: r.bp, sk: r.sk });
+  } catch {
+    if (!ctl.signal.aborted) { closeLayer(); toast(T("bunker_failed"), 4500); }
+  }
 }
 async function loginNip07() {
   if (!window.nostr) return toast(T("nip07_missing"), 4500);
@@ -587,9 +537,7 @@ function renderBusy() {
   let b = document.getElementById("busy");
   if (!st.busy) { b?.remove(); return; }
   if (!b) { b = document.createElement("div"); b.id = "busy"; b.className = "shade mid"; document.body.appendChild(b); }
-  // Con Amber, si no vuelve (cancelado o abierto en otra pestaña), se puede salir de la espera.
-  const amber = !!LS.get(OP, null) && acc()?.method === "amber";
-  b.innerHTML = `<div class="dialog"><div class="busy"><div class="spin"></div><div>${esc(st.busy)}</div></div>${amber ? `<div class="acts"><button class="btn" data-a="cancelop">${T("cancel")}</button></div>` : ""}</div>`;
+  b.innerHTML = `<div class="dialog"><div class="busy"><div class="spin"></div><div>${esc(st.busy)}</div></div></div>`;
 }
 function topBar(r) {
   const a = acc();
@@ -675,7 +623,6 @@ function item(sn, r) {
   if (canSign(a)) h += `<button class="btn d" data-a="delask" data-x="${esc(e.d)}">${T("delete")}</button>`;
   h += `</div>`;
   if (e.enc !== "nip44" && e.enc !== "empty") h += `<p class="small muted">${T("edit_only_nip44")}</p>`;
-  if (a.method === "amber" && e.parts.length) h += `<p class="small muted">${T("amber_steps")}</p>`;
   return h;
 }
 function edit(sn, r) {
@@ -812,7 +759,6 @@ function itemDialog(idx) {
 // ---------- Acciones ----------
 const ACT = {
   back, refresh, close: closeLayer,
-  cancelop() { LS.del(OP); Amber.clear(); st.busy = null; render(); },
   shade(el, ev) { if (ev.target === el) closeLayer(); },
   ok() { const f = pendingOk; pendingOk = null; closeLayer(); f?.(); },
   go(el) { go(JSON.parse(el.dataset.x)); },
@@ -827,7 +773,8 @@ const ACT = {
   },
   pickacc(el) { closeLayer(); setActive(el.dataset.x); },
   setactive(el, ev) { if (ev.target.closest("button")) return; setActive(el.dataset.x); },
-  loginamber() { closeLayer(); run("loginAmber"); },
+  loginamber() { closeLayer(); loginAmber(); },
+  nccancel() { ncAbort?.abort(); closeLayer(); },
   loginnip07() { closeLayer(); loginNip07(); },
   bunkerdlg() {
     dialog(`<h3>${T("login_bunker")}</h3><p class="small">${T("bunker_explain")}</p><input id="bunker-in" class="in mono" placeholder="bunker://…" autocapitalize="off"><div id="bunker-err" class="err"></div>
@@ -932,22 +879,14 @@ addEventListener("beforeinstallprompt", e => { e.preventDefault(); st.install = 
 (async function start() {
   lang = pickLang();
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  // Limpieza: restos de la versión anterior y cualquier resultado que viniera en la dirección.
+  LEGACY.forEach(k => LS.del(k));
+  if (location.search) history.replaceState(null, "", location.pathname);
+  // Cuentas de Amber de la versión anterior (sin conexión NIP-46): hay que volver a añadirlas.
+  if (st.accounts.some(a => a.method === "amber" && !a.bp)) setTimeout(() => toast(T("amber_readd"), 7000), 600);
   loadTrash().then(render);
-  const back = Amber.collect();
-  const op = LS.get(OP, null);
   render();
-  if (!st.accounts.length && !(op && op.name === "loginAmber")) { if (op) LS.del(OP); return; }
+  if (!st.accounts.length) return;
   loadProfiles();
-  if (op && back) {
-    // Volvemos de Amber: se retoma la operación con la cuenta con la que empezó.
-    if (op.acct && st.accounts.some(a => a.pubkey === op.acct)) st.active = op.acct;
-    st.busy = T("resuming"); render();
-    if (op.name !== "loginAmber" && !snap()) { try { st.snaps[acc().pubkey] = await load(acc().pubkey); } catch {} }
-    const route = LS.get(P + "route", null); if (route && op.name !== "loginAmber") st.route = route;
-    const ok = await exec(op, true);
-    st.busy = null; render();
-    if (ok || !LS.get(OP, null)) LS.del(P + "route");
-    if (op.name === "loginAmber") return;
-  } else if (op) { LS.del(OP); Amber.clear(); }
   if (acc()) refresh();
 })();

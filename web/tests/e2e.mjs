@@ -156,21 +156,22 @@ try {
   await page.screenshot({ path: "/tmp/web-6-fosc.png" });
   ok(await page.locator("text=Dades d'apps (NIP-78)").count() === 1, "cambio a català");
 
-  // Amber en Android: botón visible y enlace nostrsigner con callback
+  // Amber en Android: conexión NIP-46 (nostrconnect://), sin pasar nada por la URL ni por el almacenamiento
   const ctx2 = await browser.newContext({ locale: "es-ES", userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/130 Mobile" });
   await ctx2.route("**/nostr.js", async route => { const r = await route.fetch(); route.fulfill({ response: r, body: (await r.text()) + FAKE }); });
-  const p2 = await ctx2.newPage(); let target = "";
-  p2.on("request", r => { if (r.url().startsWith("nostrsigner:")) target = r.url(); });
-  p2.on("framenavigated", () => {});
-  await p2.goto("http://127.0.0.1:8099/");
+  // Restos de la versión anterior y un resultado en la URL: se tienen que borrar al abrir
+  await ctx2.addInitScript({ content: `if (!sessionStorage.getItem("x")) { sessionStorage.setItem("x", 1); localStorage.setItem("tansu.amber.res", JSON.stringify({ k: "TEXTO DESCIFRADO" })); localStorage.setItem("tansu.op", "{}"); }` });
+  const p2 = await ctx2.newPage();
+  await p2.goto("http://127.0.0.1:8099/?amber=abc&result=TEXTO%20DESCIFRADO");
   await p2.waitForSelector(".welcome");
+  ok(await p2.evaluate(() => !localStorage.getItem("tansu.amber.res") && !localStorage.getItem("tansu.op") && !location.search), "borra restos de Amber por enlace y limpia la URL");
   ok(await p2.locator("text=Añadir con Amber").count() === 1, "botón de Amber en Android");
-  await p2.click("[data-a=loginamber]"); await p2.waitForTimeout(300);
-  ok(await p2.evaluate(() => JSON.parse(localStorage.getItem("tansu.amber.req") || "null")?.type) === "get_public_key", "pide la clave a Amber (enlace nostrsigner con vuelta)");
-  // Vuelta de Amber con la clave
-  await p2.goto("http://127.0.0.1:8099/?amber=" + (await p2.evaluate(() => JSON.parse(localStorage.getItem("tansu.amber.req") || "{}").id)) + "&result=" + PK);
-  await p2.waitForSelector("text=Datos de apps (NIP-78)", { timeout: 8000 }).catch(() => {});
-  ok(await p2.evaluate(pk => JSON.parse(localStorage.getItem("tansu.accounts") || "[]").some(a => a.pubkey === pk && a.method === "amber"), PK), "cuenta de Amber añadida al volver");
+  await p2.click("[data-a=loginamber]");
+  await p2.waitForSelector("text=Esperando a Amber");
+  const href = await p2.getAttribute("#nc-open", "href");
+  ok(href.startsWith("nostrconnect://") && href.includes("secret=") && href.includes("nip44_decrypt") && href.includes("relay="), "abre Amber con nostrconnect:// (NIP-46): " + href.slice(0, 40));
+  ok(await p2.evaluate(() => Object.keys(localStorage).every(k => !/amber|op$/.test(k))), "no guarda nada de Amber en el navegador");
+  await p2.click("[data-a=nccancel]");
   ok(errors.length === 0, "sin errores de JavaScript " + errors.join(" | "));
 } finally {
   await browser.close(); srv.kill();

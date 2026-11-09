@@ -13,7 +13,7 @@ Explorador tipo gestor de archivos para los datos privados que las apps de Nostr
 | Privacidad | Solo publica datos cifrados con NIP-44 para la propia cuenta (ADR 0001) |
 | Cuentas | Varias: Amber, bunker, npub (ADR 0002) |
 | Plataforma | Android nativo (Kotlin, Compose, Material 3, minSdk 26) y web con PWA opcional (JavaScript sin compilación + nostr-tools) |
-| Web: cuentas | Amber por enlace NIP-55 (cada paso vuelve a la página y la operación se retoma), extensión NIP-07, bunker, npub |
+| Web: cuentas | Amber como firmante remoto (NIP-46, `nostrconnect://`), extensión NIP-07, bunker, npub. Sin NIP-55 por enlace: devolvía lo descifrado en la URL |
 | Base | Cliente Nostr, cripto y estilos de Wavestr |
 | Idiomas | ca/es/en, por defecto el del dispositivo o inglés |
 | Distribución | GitHub Releases + Obtainium + Zapstore. Rama `beta` → «Tansu Beta» |

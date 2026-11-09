@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 (beta)
+
+- Web: Amber se conecta como firmante remoto (NIP-46, enlace `nostrconnect://`) en vez de NIP-55 por enlace. Antes, el texto descifrado volvía en la dirección de la página y podía quedar en el historial del navegador (y sincronizarse). Ahora lo descifrado solo vive en memoria. Las cuentas de Amber añadidas en la web hay que volver a añadirlas; al abrir se borran los restos de la versión anterior.
+- Documentación: sección de seguridad (qué protege el cifrado y qué no).
+
 ## 0.3.0 (beta)
 
 - Contenido con dos vistas: **Visual** (fichas, árboles de carpetas, tablas, etiquetas, fechas legibles, sí/no; genérica para cualquier app) y **Código** (el JSON tal cual, que es lo que se edita). Visual por defecto; se recuerda la última elegida. Android y web.
