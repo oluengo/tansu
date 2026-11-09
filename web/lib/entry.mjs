@@ -1,9 +1,9 @@
 // Puente Nostr de Tansu web (se empaqueta en ../nostr.js con `npm run build` en web/lib).
 // Firma y cifrado los hace un firmante externo: extensión del navegador (NIP-07) o bunker (NIP-46).
 // Tansu no ve ni guarda ninguna nsec. Con bunker se guarda solo la clave de esa conexión.
-import { BunkerSigner, parseBunkerInput } from "nostr-tools/nip46";
+import { BunkerSigner, createNostrConnectURI, parseBunkerInput } from "nostr-tools/nip46";
 import { SimplePool } from "nostr-tools/pool";
-import { generateSecretKey, getEventHash, verifyEvent } from "nostr-tools/pure";
+import { generateSecretKey, getEventHash, getPublicKey, verifyEvent } from "nostr-tools/pure";
 import * as nip19 from "nostr-tools/nip19";
 import { bytesToHex, hexToBytes } from "nostr-tools/utils";
 
@@ -41,6 +41,26 @@ export async function bunkerConnect(input, onauth) {
   bunkers.set(pubkey, s);
   return { pubkey, sk: bytesToHex(sk), bp };
 }
+/**
+ * Conexión iniciada por Tansu (nostrconnect://, NIP-46): la abre Amber (u otro firmante) y responde por relays.
+ * Así nada pasa por la dirección de la página ni por el almacenamiento del navegador.
+ * onUri(uri) recibe el enlace para abrirlo; devuelve lo mismo que bunkerConnect.
+ */
+export async function nostrConnect(onUri, onauth, maxWait = 180000) {
+  const sk = generateSecretKey();
+  const secret = bytesToHex(generateSecretKey()).slice(0, 16);
+  const uri = createNostrConnectURI({
+    clientPubkey: getPublicKey(sk), relays: NC_RELAYS, secret, name: "Tansu",
+    url: location.origin + location.pathname,
+    perms: ["sign_event:30078", "sign_event:5", "nip44_encrypt", "nip44_decrypt", "nip04_decrypt", "get_public_key"],
+  });
+  onUri(uri);
+  const s = await BunkerSigner.fromURI(sk, uri, { pool, onauth }, maxWait);
+  const pubkey = await s.getPublicKey();
+  bunkers.set(pubkey, s);
+  return { pubkey, sk: bytesToHex(sk), bp: s.bp };
+}
+const NC_RELAYS = ["wss://relay.nsec.app", "wss://relay.damus.io", "wss://nos.lol"];
 function bunker(pubkey, bp, skHex, onauth) {
   let s = bunkers.get(pubkey);
   if (!s) { s = BunkerSigner.fromBunker(hexToBytes(skHex), bp, { pool, onauth }); bunkers.set(pubkey, s); }

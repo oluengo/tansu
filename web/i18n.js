@@ -194,9 +194,10 @@ window.TANSU_I18N = {
 "android_app": "Android app",
 "android_app_sub": "APK on GitHub, Obtainium and Zapstore (with Amber)",
 "web_storage_note": "Accounts and trash are kept in this browser only.",
-"amber_web_note": "Amber opens and comes back to Tansu for each step (sign, encrypt, decrypt).",
-"amber_steps": "With Amber, a backup in parts needs one trip to Amber per part.",
-"resuming": "Continuing after Amber…",
+"amber_web_note": "Amber connects as a remote signer (NIP-46): approve it in Amber and come back. Nothing decrypted goes through the browser address or storage.",
+"nc_waiting": "Waiting for Amber… Approve the connection and come back to this tab.",
+"nc_open": "Open Amber",
+"amber_readd": "Add your Amber account again: it now connects in a safer way (NIP-46).",
 "copied_ok": "Copied"
 },
 "es": {
@@ -392,9 +393,10 @@ window.TANSU_I18N = {
 "android_app": "App para Android",
 "android_app_sub": "APK en GitHub, Obtainium y Zapstore (con Amber)",
 "web_storage_note": "Las cuentas y la papelera se guardan solo en este navegador.",
-"amber_web_note": "Amber se abre y vuelve a Tansu en cada paso (firmar, cifrar, descifrar).",
-"amber_steps": "Con Amber, una copia por partes necesita un viaje a Amber por cada parte.",
-"resuming": "Continuando tras Amber…",
+"amber_web_note": "Amber se conecta como firmante remoto (NIP-46): apruébalo en Amber y vuelve. Nada descifrado pasa por la dirección ni por el almacenamiento del navegador.",
+"nc_waiting": "Esperando a Amber… Aprueba la conexión y vuelve a esta pestaña.",
+"nc_open": "Abrir Amber",
+"amber_readd": "Vuelve a añadir tu cuenta de Amber: ahora se conecta de una forma más segura (NIP-46).",
 "copied_ok": "Copiado"
 },
 "ca": {
@@ -590,9 +592,10 @@ window.TANSU_I18N = {
 "android_app": "App per a Android",
 "android_app_sub": "APK a GitHub, Obtainium i Zapstore (amb Amber)",
 "web_storage_note": "Els comptes i la paperera es desen només en aquest navegador.",
-"amber_web_note": "Amber s'obre i torna a Tansu a cada pas (signar, xifrar, desxifrar).",
-"amber_steps": "Amb Amber, una còpia per parts necessita un viatge a Amber per cada part.",
-"resuming": "Continuant després d'Amber…",
+"amber_web_note": "Amber es connecta com a signant remot (NIP-46): aprova-ho a Amber i torna. Res desxifrat no passa per l'adreça ni per l'emmagatzematge del navegador.",
+"nc_waiting": "Esperant Amber… Aprova la connexió i torna a aquesta pestanya.",
+"nc_open": "Obre Amber",
+"amber_readd": "Torna a afegir el teu compte d'Amber: ara es connecta d'una manera més segura (NIP-46).",
 "copied_ok": "Copiat"
 }
 },

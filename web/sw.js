@@ -1,6 +1,6 @@
 // PWA opcional: guarda la app para abrirla sin conexión. Los datos siempre se leen de los relays.
 // Cambia la versión al actualizar para forzar la recarga de la caché.
-const CACHE = "tansu-0.3.0";
+const CACHE = "tansu-0.3.1";
 const CORE = ["./", "index.html", "app.js", "app.css", "i18n.js", "nostr.js", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "favicon-48.png"];
 
 self.addEventListener("install", e => {

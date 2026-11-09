@@ -111,3 +111,5 @@ If you find Tansu useful:
 [Changelog](CHANGELOG.md) · [Report a problem](https://github.com/oluengo/tansu/issues) · [Credits](CREDITS.md) · [MIT License](LICENSE)
 
 <sub>Built with AI · tested by humans.</sub>
+
+Seguridad y privacidad (qué protege el cifrado y qué no): [docs/seguridad.md](docs/seguridad.md).

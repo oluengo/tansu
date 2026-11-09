@@ -217,9 +217,10 @@ w('install_note','Optional: install Tansu as an app (PWA). It works the same in 
 w('android_app','Android app','App para Android','App per a Android')
 w('android_app_sub','APK on GitHub, Obtainium and Zapstore (with Amber)','APK en GitHub, Obtainium y Zapstore (con Amber)','APK a GitHub, Obtainium i Zapstore (amb Amber)')
 w('web_storage_note','Accounts and trash are kept in this browser only.','Las cuentas y la papelera se guardan solo en este navegador.','Els comptes i la paperera es desen només en aquest navegador.')
-w('amber_web_note','Amber opens and comes back to Tansu for each step (sign, encrypt, decrypt).','Amber se abre y vuelve a Tansu en cada paso (firmar, cifrar, descifrar).','Amber s\'obre i torna a Tansu a cada pas (signar, xifrar, desxifrar).')
-w('amber_steps','With Amber, a backup in parts needs one trip to Amber per part.','Con Amber, una copia por partes necesita un viaje a Amber por cada parte.','Amb Amber, una còpia per parts necessita un viatge a Amber per cada part.')
-w('resuming','Continuing after Amber…','Continuando tras Amber…','Continuant després d\'Amber…')
+w('amber_web_note','Amber connects as a remote signer (NIP-46): approve it in Amber and come back. Nothing decrypted goes through the browser address or storage.','Amber se conecta como firmante remoto (NIP-46): apruébalo en Amber y vuelve. Nada descifrado pasa por la dirección ni por el almacenamiento del navegador.','Amber es connecta com a signant remot (NIP-46): aprova-ho a Amber i torna. Res desxifrat no passa per l\'adreça ni per l\'emmagatzematge del navegador.')
+w('nc_waiting','Waiting for Amber… Approve the connection and come back to this tab.','Esperando a Amber… Aprueba la conexión y vuelve a esta pestaña.','Esperant Amber… Aprova la connexió i torna a aquesta pestanya.')
+w('nc_open','Open Amber','Abrir Amber','Obre Amber')
+w('amber_readd','Add your Amber account again: it now connects in a safer way (NIP-46).','Vuelve a añadir tu cuenta de Amber: ahora se conecta de una forma más segura (NIP-46).','Torna a afegir el teu compte d\'Amber: ara es connecta d\'una manera més segura (NIP-46).')
 w('copied_ok','Copied','Copiado','Copiat')
 import json
 LANGS=['en','es','ca']
