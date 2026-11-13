@@ -201,7 +201,7 @@ jobs:
             gh release create tansu-beta $files --prerelease --target "$GITHUB_SHA" --title "Tansu Beta $VERSION" --notes-file notas.md
           else
             awk -v v="$VERSION" '$0 ~ "^## " v {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notas.md
-            printf '\n---\nHuella del certificado: `%s`\n' "$(sed 's/.*: //' dist/firma-sha256.txt)" >> notas.md
+            printf '\n---\nCertificate fingerprint: `%s`\n' "$(sed 's/.*: //' dist/firma-sha256.txt)" >> notas.md
             if gh release view "$TAG" > /dev/null 2>&1; then
               gh release upload "$TAG" $files --clobber
               gh release edit "$TAG" --title "Tansu $VERSION" --notes-file notas.md
