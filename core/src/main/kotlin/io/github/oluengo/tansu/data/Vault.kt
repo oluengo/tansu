@@ -38,7 +38,7 @@ data class Opened(val text: String, val manifest: JsonObject? = null) {
 }
 
 /**
- * Lee y escribe los datos de apps (NIP-78) de una cuenta. Regla de Tansu (ver docs/decisiones/0001):
+ * Lee y escribe los datos de apps (NIP-78) de una cuenta. Regla de Tansu (ver docs/decisions/0001):
  * **todo lo que publica va cifrado con NIP-44 para la propia cuenta**; nunca publica nada legible.
  */
 class Vault(private val pool: RelayPool) {

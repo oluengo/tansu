@@ -1,7 +1,7 @@
 /* Tansu web: lo mismo que la app Android, en el navegador (PWA opcional).
    - Cuentas: Amber (como firmante remoto NIP-46 con nostrconnect://, en Android), extensión (NIP-07),
      bunker (NIP-46) o npub en solo lectura. Nunca se ve ni se guarda una nsec.
-   - Todo lo que se publica va cifrado con NIP-44 para la propia cuenta (docs/decisiones/0001).
+   - Todo lo que se publica va cifrado con NIP-44 para la propia cuenta (docs/decisions/0001).
    - Lo descifrado solo vive en memoria: nunca se guarda en el navegador ni pasa por la dirección de la página.
      (Por eso Amber no usa NIP-55 por enlace en la web: devolvía el texto descifrado en la URL, que queda en el historial.) */
 "use strict";

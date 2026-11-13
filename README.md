@@ -36,11 +36,13 @@ APK certificate SHA-256 fingerprint (also in Settings → About): `E3:71:51:7A:B
 - **Never sees your nsec:** Amber (NIP-55), the browser extension (NIP-07) or a bunker (NIP-46) sign and encrypt.
 - Decrypted content only lives in memory while the app is open. No servers of its own, no trackers: just your relays.
 
+Security and privacy (what encryption protects and what it doesn't): [docs/security.md](docs/security.md).
+
 ## Development
 
 Kotlin + Jetpack Compose (`:core` and `:app`), with no Nostr dependencies: its own relay client, NIP-44, NIP-46 and signatures (taken from Wavestr). The web app lives in `web/` (plain JavaScript, no build step).
 
-- Plan and decisions (in Spanish): [docs/plan-tecnico.md](docs/plan-tecnico.md) · Web app: [web/README.md](web/README.md) · Mockup: [demo/index.html](demo/index.html)
+- Technical plan: [docs/technical-plan.md](docs/technical-plan.md) · Decisions: [docs/decisions](docs/decisions/) · Web app: [web/README.md](web/README.md) · Mockup: [demo/index.html](demo/index.html)
 
 ## Support the project
 
@@ -55,5 +57,3 @@ If you find Tansu useful:
 [Changelog](CHANGELOG.md) · [Report a problem](https://github.com/oluengo/tansu/issues) · [Credits](CREDITS.md) · [MIT License](LICENSE)
 
 <sub>Built with AI · tested by humans.</sub>
-
-Seguridad y privacidad (qué protege el cifrado y qué no): [docs/seguridad.md](docs/seguridad.md).

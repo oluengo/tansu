@@ -11,7 +11,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Listas NIP-51: estándar (10000…) y conjuntos con nombre (30000…).
  * Al editar, nada pasa a ser público: los elementos privados van cifrados (NIP-44) y los públicos
- * solo se pueden quitar o hacer privados (ver docs/decisiones/0001).
+ * solo se pueden quitar o hacer privados (ver docs/decisions/0001).
  */
 object Lists {
     /** Tipos que se buscan, con una clave de texto para la UI. */
