@@ -129,3 +129,5 @@ textarea.in{min-height:60vh;resize:vertical;font:12.5px/1.5 ui-monospace,Menlo,C
 .jtab td{padding:7px 10px;border-top:1px solid var(--line);white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
 .jmore{display:block;width:100%;padding:9px;color:var(--accent);font-weight:600;font-size:13px;border-top:1px solid var(--line)}
 .jol{margin:4px 0;padding-left:22px}
+
+.badge.ok-b{background:rgba(46,138,90,.14);color:#2E8A5A}

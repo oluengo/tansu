@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -77,6 +78,7 @@ import io.github.oluengo.tansu.data.Encoding
 import io.github.oluengo.tansu.data.Entry
 import io.github.oluengo.tansu.data.Explorer
 import io.github.oluengo.tansu.data.Lists
+import io.github.oluengo.tansu.data.RelayCopy
 import io.github.oluengo.tansu.data.Snapshot
 import io.github.oluengo.tansu.data.Vault
 import io.github.oluengo.tansu.data.detectEncoding
@@ -224,7 +226,7 @@ private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Rout
                 val es = snap.entries.filter { needle in it.d.lowercase() }
                 val ls = snap.lists.filter { needle in (listTitle(it, ctx) + " " + it.kind).lowercase() }
                 item { Section(ctx.resources.getQuantityString(R.plurals.results, es.size + ls.size, es.size + ls.size)) }
-                items(es, key = { "e:" + it.d }) { EntryRow(it, showApp = true) { go(Route.Item(it.d)) } }
+                items(es, key = { "e:" + it.d }) { EntryRow(it, showApp = true, copies = copiesSummary(snap, it.events)) { go(Route.Item(it.d)) } }
                 items(ls, key = { "l:" + it.address }) { ListRow(it) { go(Route.ListItem(it.address)) } }
                 if (es.isEmpty() && ls.isEmpty()) item { EmptyNote(stringResource(R.string.search_none), Modifier.padding(horizontal = 12.dp)) }
                 return@LazyColumn
@@ -294,7 +296,7 @@ private fun EncodingBadge(enc: Encoding) {
 }
 
 @Composable
-private fun EntryRow(e: Entry, showApp: Boolean = false, onClick: () -> Unit) {
+private fun EntryRow(e: Entry, showApp: Boolean = false, copies: Pair<Int, Int>? = null, onClick: () -> Unit) {
     val ctx = LocalContext.current
     val enc = e.encoding
     Row(
@@ -307,8 +309,58 @@ private fun EntryRow(e: Entry, showApp: Boolean = false, onClick: () -> Unit) {
             val parts = if (e.chunked) " · " + ctx.resources.getQuantityString(R.plurals.parts, e.parts.size, e.parts.size) else ""
             Text(ago(ctx, e.updatedAt) + " · " + size(ctx, e.bytes) + parts, color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, maxLines = 1)
         }
+        // Aviso si no está al día en todos los relays que respondieron
+        copies?.let { (cur, total) -> if (cur < total) Badge(stringResource(R.string.relays_badge, cur, total), Ts.colors.lock, Ts.colors.lockSoft) }
         EncodingBadge(enc)
     }
+}
+
+/** (al día, relays que respondieron) para el aviso de la lista. */
+private fun copiesSummary(snap: Snapshot, events: List<Event>): Pair<Int, Int> {
+    val c = snap.copies(events)
+    return c.count { it.state == RelayCopy.State.CURRENT } to c.count { it.state != RelayCopy.State.UNKNOWN }
+}
+
+/** En qué relays está una entrada o lista, y botón para copiarla a los que falta (mismo evento, sin firmar de nuevo). */
+@Composable
+private fun RelayCopiesGroup(c: AppContainer, events: List<Event>) {
+    val st by c.explorer.state.collectAsStateWithLifecycle()
+    val snap = st.snapshot ?: return
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    val copies = snap.copies(events)
+    Group {
+        Text(stringResource(R.string.relays_where), fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.size(4.dp))
+        copies.forEach { cp ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(cp.relay.removePrefix("wss://"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                when (cp.state) {
+                    RelayCopy.State.CURRENT -> Badge("✓ " + stringResource(R.string.relay_current), Color(0xFF2E8A5A), Color(0x262E8A5A))
+                    RelayCopy.State.OLDER -> Badge(stringResource(R.string.relay_older, cp.olderAt?.let { ago(ctx, it) } ?: "?"), Ts.colors.lock, Ts.colors.lockSoft)
+                    RelayCopy.State.PARTIAL -> Badge(stringResource(R.string.relay_partial), Ts.colors.lock, Ts.colors.lockSoft)
+                    RelayCopy.State.MISSING -> Badge("✕ " + stringResource(R.string.relay_missing), Ts.colors.danger, Ts.colors.danger.copy(alpha = 0.12f))
+                    RelayCopy.State.UNKNOWN -> Badge(stringResource(R.string.relay_unknown))
+                }
+            }
+        }
+        val missing = copies.count { it.needsSync }
+        if (missing > 0) {
+            OutlinedButton(enabled = !busy, onClick = {
+                busy = true
+                scope.launch {
+                    c.explorer.syncCopies(events)
+                        .onSuccess { Toast.makeText(ctx, ctx.getString(R.string.relays_synced, it), Toast.LENGTH_SHORT).show() }
+                        .onFailure { Toast.makeText(ctx, errorText(ctx, it), Toast.LENGTH_LONG).show() }
+                    busy = false
+                }
+            }, modifier = Modifier.padding(top = 6.dp)) { Text(stringResource(R.string.relays_sync, missing)) }
+            Text(stringResource(R.string.relays_sync_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+        }
+        Text(stringResource(R.string.relays_where_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+    }
+    if (busy) BusyDialog(c)
 }
 
 // ---------- Carpeta de una app ----------
@@ -319,7 +371,7 @@ private fun Folder(c: AppContainer, snap: Snapshot, app: String, refreshing: Boo
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { c.explorer.refresh() }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
             if (list.isEmpty()) item { EmptyNote(stringResource(R.string.folder_empty), Modifier.padding(horizontal = 12.dp)) }
-            items(list, key = { it.d }) { e -> EntryRow(e) { go(Route.Item(e.d)) } }
+            items(list, key = { it.d }) { e -> EntryRow(e, copies = copiesSummary(snap, e.events)) { go(Route.Item(e.d)) } }
         }
     }
 }
@@ -439,6 +491,7 @@ private fun ListScreen(c: AppContainer, account: Account, e: Event) {
                 if (needsDecrypt) decrypt { startEdit(c.explorer.state.value.listPrivate[e.address].orEmpty()) } else startEdit(priv.orEmpty())
             }) { Text(stringResource(R.string.edit)) }
             Text(stringResource(R.string.lists_edit_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+            RelayCopiesGroup(c, listOf(e))
         } else {
             Text(stringResource(R.string.lists_edit_rules), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
             listOf(false, true).forEach { isPriv ->
@@ -660,6 +713,7 @@ private fun ItemScreen(c: AppContainer, account: Account, e: Entry, go: (Route) 
             if (account.canSign) OutlinedButton(onClick = { askDelete = true }) { Text(stringResource(R.string.delete), color = Ts.colors.danger) }
         }
         if (enc != Encoding.NIP44 && enc != Encoding.EMPTY) Text(stringResource(R.string.edit_only_nip44), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+        RelayCopiesGroup(c, e.events)
     }
 
     if (askDelete) AlertDialog(

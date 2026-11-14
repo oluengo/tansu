@@ -37,8 +37,24 @@ class RelayPool(private val http: OkHttpClient) {
             .distinctBy { it.id }
     }
 
+    /** Lo que respondió un relay: [reached] = se pudo conectar. */
+    data class RelayResult(val url: String, val reached: Boolean, val events: List<Event>)
+
+    /** Como [query], pero relay a relay: para saber en cuáles está cada evento. */
+    suspend fun queryEach(
+        relays: Collection<String>,
+        filters: List<Filter>,
+        timeoutMs: Long = 6_000,
+    ): List<RelayResult> = coroutineScope {
+        relays.distinct().map { url -> async(Dispatchers.IO) { queryOneResult(url, filters, timeoutMs) } }.awaitAll()
+    }
+
     private suspend fun queryOne(url: String, filters: List<Filter>, timeoutMs: Long): List<Event> =
+        queryOneResult(url, filters, timeoutMs).events
+
+    private suspend fun queryOneResult(url: String, filters: List<Filter>, timeoutMs: Long): RelayResult =
         withContext(Dispatchers.IO) {
+            val opened = java.util.concurrent.atomic.AtomicBoolean(false)
             val events = Collections.synchronizedList(mutableListOf<Event>())
             val done = CompletableDeferred<Unit>()
             val subId = "rs" + UUID.randomUUID().toString().take(8)
@@ -49,6 +65,7 @@ class RelayPool(private val http: OkHttpClient) {
 
             val ws = http.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
+                    opened.set(true)
                     webSocket.send(req)
                 }
 
@@ -78,7 +95,7 @@ class RelayPool(private val http: OkHttpClient) {
                 runCatching { ws.send(buildJsonArray { add("CLOSE"); add(subId) }.toString()) }
                 runCatching { ws.close(1000, null) }
             }
-            events.toList()
+            RelayResult(url, opened.get(), events.toList())
         }
 
     /**

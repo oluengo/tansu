@@ -1,20 +1,20 @@
 # Tansu web
 
-La misma app en el navegador, con PWA opcional (se puede instalar; sin instalar funciona igual).
+The same app in the browser, with an optional PWA (it can be installed; it works the same without installing).
 
-- **Cuentas:** Amber (en Android, como firmante remoto NIP-46 con `nostrconnect://`), extensión del navegador (NIP-07), bunker (NIP-46) o npub en solo lectura.
-- **Nada descifrado en el navegador:** lo descifrado solo vive en memoria; no pasa por la dirección de la página ni por localStorage/IndexedDB. (No se usa NIP-55 por enlace porque devuelve el resultado en la URL, que queda en el historial.)
-- **Privado:** igual que en Android, todo lo que se publica va cifrado con NIP-44 para la propia cuenta.
-- Las cuentas y la papelera se guardan solo en ese navegador (localStorage e IndexedDB).
+- **Accounts:** Amber (on Android, as a NIP-46 remote signer via `nostrconnect://`), browser extension (NIP-07), bunker (NIP-46) or a read-only npub.
+- **Nothing decrypted is stored in the browser:** decrypted content only lives in memory; it never goes through the page address or localStorage/IndexedDB. (NIP-55 via link is not used because it returns the result in the URL, which stays in the history.)
+- **Private:** as on Android, everything published is encrypted with NIP-44 for the account itself.
+- Accounts and the trash are stored only in that browser (localStorage and IndexedDB).
 
-Publicada por `.github/workflows/pages.yml`: `main` → `oluengo.github.io/tansu/app/`, `beta` → `oluengo.github.io/tansu/beta/`. La página de presentación (`site/`) va en `oluengo.github.io/tansu/`.
+Published by `.github/workflows/pages.yml`: `main` → `oluengo.github.io/tansu/app/`, `beta` → `oluengo.github.io/tansu/beta/`. The landing page (`site/`) goes to `oluengo.github.io/tansu/`.
 
-## Archivos
+## Files
 
-| Archivo | Qué es |
+| File | What it is |
 |---|---|
-| `index.html`, `app.js`, `app.css` | La app (JavaScript sin dependencias ni compilación) |
-| `i18n.js` | Cadenas ca/es/en, generadas con `python3 scripts/strings/gen.py` desde las mismas de Android |
-| `nostr.js` | nostr-tools empaquetado (`cd web/lib && npm ci && npm run build`) |
+| `index.html`, `app.js`, `app.css` | The app (JavaScript with no dependencies and no build step) |
+| `i18n.js` | ca/es/en strings, generated with `python3 scripts/strings/gen.py` from the same ones as Android |
+| `nostr.js` | Bundled nostr-tools (`cd web/lib && npm ci && npm run build`) |
 | `sw.js`, `manifest.webmanifest` | PWA |
-| `tests/e2e.mjs` | Prueba con relays en memoria y una extensión NIP-07 de prueba (Playwright) |
+| `tests/e2e.mjs` | Test with in-memory relays and a test NIP-07 extension (Playwright) |

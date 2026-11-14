@@ -1,11 +1,11 @@
-# Compila Tansu (APK de Android).
-# - Push a main / pull request: tests, traducciones y APK en «Artifacts».
-# - Push a la rama beta: «Tansu Beta», otra app (io.github.oluengo.tansu.beta) con sus propios datos,
-#   versión X.Y.Z-beta.N. Se publica como pre-release «Tansu Beta» (etiqueta tansu-beta, se rehace en cada push).
-# - Etiqueta v* (p. ej. v0.1.0, igual que tansuVersion en app/build.gradle.kts): Release con el APK firmado.
-#   De ahí lo recogen Obtainium y Zapstore.
-# Firma: secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
-# (los mismos nombres que en Usus y Wavestr). Sin ellos se genera un APK de depuración y no se publica nada.
+# Builds Tansu (Android APK).
+# - Push to main / pull request: tests, translations and APK in "Artifacts".
+# - Push to the beta branch: "Tansu Beta", a separate app (io.github.oluengo.tansu.beta) with its own data,
+#   version X.Y.Z-beta.N. Published as the "Tansu Beta" pre-release (tag tansu-beta, rebuilt on every push).
+# - Tag v* (e.g. v0.1.0, matching tansuVersion in app/build.gradle.kts): Release with the signed APK.
+#   Obtainium and Zapstore pick it up from there.
+# Signing: secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# (same names as in Usus and Wavestr). Without them a debug APK is built and nothing is published.
 name: Build
 
 on:
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: "Publicar versión (crea la etiqueta vX.Y.Z y la Release con el APK; solo desde main)"
+        description: "Publish release (creates the vX.Y.Z tag and the Release with the APK; main only)"
         type: boolean
         default: false
 
@@ -34,18 +34,18 @@ jobs:
     env:
       TANSU_BETA: ${{ github.ref == 'refs/heads/beta' && '1' || '' }}
       TANSU_BETA_N: ${{ github.run_number }}
-      # Versión normal: etiqueta v* empujada o «Publicar versión» desde Actions (en main).
+      # Regular release: pushed v* tag or "Publish release" from Actions (on main).
       RELEASE: ${{ (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main')) && 'true' || '' }}
     outputs:
-      # «beta» o «release». No se pasa la etiqueta en sí: contiene «tansu», que coincide con un secret
-      # (el alias de la clave) y GitHub descarta las salidas que contienen secrets.
+      # "beta" or "release". The tag itself isn't passed: it contains "tansu", which matches a secret
+      # (the key alias) and GitHub drops outputs that contain secrets.
       channel: ${{ steps.v.outputs.channel }}
       version: ${{ steps.v.outputs.version }}
       signed: ${{ steps.key.outputs.signed }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Errores de compilación como anotaciones
+      - name: Build errors as annotations
         run: echo "::add-matcher::.github/kotlin-matcher.json"
 
       - uses: actions/setup-java@v6
@@ -55,13 +55,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Comprobar traducciones (ca/es/en)
+      - name: Check translations (ca/es/en)
         run: python3 scripts/check_strings.py
 
       - name: Tests unitarios
         run: ./gradlew :core:test testDebugUnitTest --stacktrace
 
-      - name: Versión
+      - name: Version
         id: v
         run: |
           v="$(sed -n 's/^val tansuVersion = "\(.*\)"/\1/p' app/build.gradle.kts)"
@@ -72,14 +72,14 @@ jobs:
           fi
           if [ "$TANSU_BETA" = "1" ]; then echo "tag=tansu-beta" >> "$GITHUB_OUTPUT"; echo "channel=beta" >> "$GITHUB_OUTPUT"; elif [ "$RELEASE" = "true" ]; then echo "tag=v$v" >> "$GITHUB_OUTPUT"; echo "channel=release" >> "$GITHUB_OUTPUT"; fi
 
-      - name: Comprobar que la etiqueta coincide con la versión
+      - name: Check that the tag matches the version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           if [ "${GITHUB_REF_NAME#v}" != "${{ steps.v.outputs.version }}" ]; then
-            echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con tansuVersion ${{ steps.v.outputs.version }}"; exit 1
+            echo "::error::Tag $GITHUB_REF_NAME does not match tansuVersion ${{ steps.v.outputs.version }}"; exit 1
           fi
 
-      - name: Clave de firma
+      - name: Signing key
         id: key
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -89,11 +89,11 @@ jobs:
             echo "TANSU_KEYSTORE=$RUNNER_TEMP/tansu.jks" >> "$GITHUB_ENV"
             echo "signed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::Sin clave de firma: se genera un APK de depuración y no se publica nada."
+            echo "::warning::No signing key: building a debug APK and publishing nothing."
             echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Compilar (firmado)
+      - name: Build (signed)
         if: steps.key.outputs.signed == 'true'
         env:
           TANSU_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -101,45 +101,45 @@ jobs:
           TANSU_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           for v in TANSU_KEYSTORE_PASSWORD TANSU_KEY_ALIAS TANSU_KEY_PASSWORD; do
-            if [ -z "${!v}" ]; then echo "::error::Falta el secret de firma correspondiente a $v"; exit 1; fi
+            if [ -z "${!v}" ]; then echo "::error::Missing signing secret for $v"; exit 1; fi
           done
-          # Diagnóstico sin mostrar secretos: tamaño y tipo del archivo, si abre la contraseña y qué alias contiene.
+          # Diagnostics without showing secrets: file size and type, whether the password opens it and which aliases it holds.
           echo "Keystore: $(stat -c %s "$TANSU_KEYSTORE") bytes · $(file -b "$TANSU_KEYSTORE" | cut -c1-60)"
           if ! keytool -list -keystore "$TANSU_KEYSTORE" -storepass "$TANSU_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/kt.out" 2>&1; then
-            echo "::error::ANDROID_KEYSTORE_PASSWORD no abre el keystore (o ANDROID_KEYSTORE_BASE64 no es un keystore válido): $(grep -i 'error' "$RUNNER_TEMP/kt.out" | head -c 300)"; exit 1
+            echo "::error::ANDROID_KEYSTORE_PASSWORD does not open the keystore (or ANDROID_KEYSTORE_BASE64 is not a valid keystore): $(grep -i 'error' "$RUNNER_TEMP/kt.out" | head -c 300)"; exit 1
           fi
           aliases=$(grep -iE 'PrivateKeyEntry' "$RUNNER_TEMP/kt.out" | cut -d, -f1 | tr '\n' ' ')
           if ! keytool -list -keystore "$TANSU_KEYSTORE" -storepass "$TANSU_KEYSTORE_PASSWORD" -alias "$TANSU_KEY_ALIAS" > /dev/null 2>&1; then
-            echo "::error::ANDROID_KEY_ALIAS no coincide. Alias en el keystore: $aliases"; exit 1
+            echo "::error::ANDROID_KEY_ALIAS does not match. Aliases in the keystore: $aliases"; exit 1
           fi
           ./gradlew assembleRelease --stacktrace
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk "dist/${{ steps.v.outputs.file }}-${{ steps.v.outputs.version }}.apk"
 
-      - name: Compilar (depuración)
+      - name: Build (debug)
         if: steps.key.outputs.signed != 'true'
         run: |
           ./gradlew assembleDebug --stacktrace
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk "dist/${{ steps.v.outputs.file }}-${{ steps.v.outputs.version }}-debug.apk"
 
-      # Sin clave, comprobamos igualmente que la versión release (con R8) compila.
-      - name: Comprobar release (R8, sin firmar)
+      # Without a key, we still check that the release build (with R8) compiles.
+      - name: Check release build (R8, unsigned)
         if: steps.key.outputs.signed != 'true'
         run: ./gradlew assembleRelease --stacktrace
 
-      - name: Huella SHA-256 del certificado
+      - name: Certificate SHA-256 fingerprint
         if: steps.key.outputs.signed == 'true'
         run: |
           f=$(ls dist/*.apk); bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$bt/apksigner" verify --print-certs "$f" | grep -i sha-256 | tee dist/firma-sha256.txt
           rm -f "$RUNNER_TEMP/tansu.jks"
 
-      - name: Permisos del APK
+      - name: APK permissions
         run: |
           f=$(ls dist/*.apk); bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$bt/aapt2" dump permissions "$f" | tee dist/permisos.txt
-          if grep -E "STORAGE|LOCATION|CAMERA|RECORD_AUDIO|CONTACTS" dist/permisos.txt; then echo "::error::Permiso no esperado"; exit 1; fi
+          if grep -E "STORAGE|LOCATION|CAMERA|RECORD_AUDIO|CONTACTS" dist/permisos.txt; then echo "::error::Unexpected permission"; exit 1; fi
 
       - uses: actions/upload-artifact@v7
         with:
@@ -147,7 +147,7 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  # Prueba de arranque del APK en un emulador: instala, abre y comprueba que no se cierra.
+  # APK startup test on an emulator: installs, opens and checks that it doesn't close.
   android-smoke:
     needs: build
     runs-on: ubuntu-latest
@@ -163,7 +163,7 @@ jobs:
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
-      - name: Arrancar en el emulador (Android 14)
+      - name: Start on the emulator (Android 14)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -185,7 +185,7 @@ jobs:
           pattern: "*-android"
           merge-multiple: true
           path: dist
-      - name: Release de GitHub
+      - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.build.outputs.channel == 'beta' && 'tansu-beta' || format('v{0}', needs.build.outputs.version) }}
@@ -194,14 +194,14 @@ jobs:
           ls -la dist
           files=$(ls dist/*.apk)
           if [ "$TAG" = "tansu-beta" ]; then
-            # Beta: una sola pre-release «Tansu Beta» que se rehace en cada push; no cuenta como última versión.
+            # Beta: a single "Tansu Beta" pre-release rebuilt on every push; it doesn't count as the latest version.
             gh release delete tansu-beta --cleanup-tag --yes || true
-            printf '%s\n\n%s\n' "**Versión de pruebas** $VERSION · $(git log -1 --format=%s)" \
-              "Se instala como otra app, «Tansu Beta», con sus propios datos: no toca la Tansu normal. Puede tener fallos." > notas.md
+            printf '%s\n\n%s\n' "**Test version** $VERSION · $(git log -1 --format=%s)" \
+              "Installs as a separate app, \"Tansu Beta\", with its own data: it doesn't touch the regular Tansu. It may have bugs." > notas.md
             gh release create tansu-beta $files --prerelease --target "$GITHUB_SHA" --title "Tansu Beta $VERSION" --notes-file notas.md
           else
             awk -v v="$VERSION" '$0 ~ "^## " v {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notas.md
-            printf '\n---\nHuella del certificado: `%s`\n' "$(sed 's/.*: //' dist/firma-sha256.txt)" >> notas.md
+            printf '\n---\nCertificate fingerprint: `%s`\n' "$(sed 's/.*: //' dist/firma-sha256.txt)" >> notas.md
             if gh release view "$TAG" > /dev/null 2>&1; then
               gh release upload "$TAG" $files --clobber
               gh release edit "$TAG" --title "Tansu $VERSION" --notes-file notas.md

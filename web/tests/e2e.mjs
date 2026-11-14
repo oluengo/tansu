@@ -30,19 +30,28 @@ const seed = [
 if (parts.length < 2) throw new Error("se esperaban varias partes");
 
 const FAKE = `;(function(){
+  // Relays en memoria, uno por URL. nos.lol no tiene los favoritos de Wavestr; relay.primal.net no responde.
   const real = TansuNostr;
-  const load = () => JSON.parse(localStorage.getItem("__relay") || "[]");
-  const save = s => localStorage.setItem("__relay", JSON.stringify(s));
+  const DOWN = ["wss://relay.primal.net"];
+  const load = () => JSON.parse(localStorage.getItem("__relays") || "{}");
+  const save = s => localStorage.setItem("__relays", JSON.stringify(s));
   const dTag = e => (e.tags.find(t => t[0] === "d") || [])[1] || "";
   const addr = e => e.kind >= 30000 ? e.kind + ":" + e.pubkey + ":" + dTag(e) : "";
   const match = (e, f) => (!f.kinds || f.kinds.includes(e.kind)) && (!f.authors || f.authors.includes(e.pubkey));
+  const at = (s, url) => (s[url] ||= JSON.parse(localStorage.getItem("__seed") || "[]").filter(e => !(url === "wss://nos.lol" && dTag(e) === "wavestr/favorites")));
   window.__published = [];
   window.TansuNostr = Object.assign({}, real, {
-    query: async (relays, filters) => load().filter(e => filters.some(f => match(e, f))),
+    query: async (relays, filters) => { const s = load(), m = new Map(); for (const u of relays) if (!DOWN.includes(u)) for (const e of at(s, u)) if (filters.some(f => match(e, f))) m.set(e.id, e); save(s); return [...m.values()]; },
+    queryEach: async (relays, filters) => { const s = load(); const r = relays.map(u => DOWN.includes(u) ? { url: u, reached: false, events: [] } : { url: u, reached: true, events: at(s, u).filter(e => filters.some(f => match(e, f))) }); save(s); return r; },
     publish: async (relays, e) => {
-      const s = load();
-      if (e.kind === 5) { const as = e.tags.filter(t => t[0] === "a").map(t => t[1]); for (let i = s.length - 1; i >= 0; i--) if (as.includes(addr(s[i])) && s[i].created_at <= e.created_at) s.splice(i, 1); }
-      s.push(e); save(s); window.__published.push(e); return 3;
+      const s = load(); let n = 0;
+      for (const u of relays) {
+        if (DOWN.includes(u)) continue;
+        const l = at(s, u);
+        if (e.kind === 5) { const as = e.tags.filter(t => t[0] === "a").map(t => t[1]); for (let i = l.length - 1; i >= 0; i--) if (as.includes(addr(l[i])) && l[i].created_at <= e.created_at) l.splice(i, 1); }
+        if (!l.some(x => x.id === e.id)) l.push(e); n++;
+      }
+      save(s); window.__published.push(e); return n;
     },
   });
 })();`;
@@ -56,7 +65,7 @@ const ok = (cond, msg) => { console.log((cond ? "✓ " : "✗ ") + msg); if (!co
 try {
   const ctx = await browser.newContext({ locale: "es-ES", viewport: { width: 400, height: 860 } });
   await ctx.addInitScript({ content: readFileSync(path.join(WEB, "tests/mock.js"), "utf8") + `;window.nostr = Mock.makeExt("${SK}");` });
-  await ctx.addInitScript({ content: `if (!localStorage.getItem("__relay")) localStorage.setItem("__relay", ${JSON.stringify(JSON.stringify(seed))});` });
+  await ctx.addInitScript({ content: `if (!localStorage.getItem("__seed")) localStorage.setItem("__seed", ${JSON.stringify(JSON.stringify(seed))});` });
   await ctx.route("**/nostr.js", async route => { const r = await route.fetch(); route.fulfill({ response: r, body: (await r.text()) + FAKE }); });
   const page = await ctx.newPage();
   const errors = []; page.on("pageerror", e => errors.push(e.message));
@@ -69,6 +78,23 @@ try {
   await page.waitForSelector("text=Datos de apps (NIP-78)");
   for (const f of ["Wavestr", "Usus", "Otra".toLowerCase()]) ok(await page.locator(`.row .n:text-is("${f}")`).count() === 1, "carpeta " + f);
   await page.screenshot({ path: "/tmp/web-2-inicio.png" });
+
+  // Dónde está cada dato: favoritos de Wavestr faltan en nos.lol; primal no responde
+  await page.click('.row .n:text-is("Wavestr")');
+  ok(await page.locator(".row", { hasText: "favorites" }).locator("text=1/2 relays").count() === 1, "aviso en la lista: 1/2 relays al día");
+  await page.click("text=favorites");
+  const rel = async host => (await page.locator(".tagrow", { hasText: host }).textContent()) || "";
+  ok((await rel("relay.damus.io")).includes("al día"), "damus: al día");
+  ok((await rel("nos.lol")).includes("no está"), "nos.lol: no está");
+  ok((await rel("relay.primal.net")).includes("sin respuesta"), "primal: sin respuesta");
+  await page.click("button:text('Copiar a los que faltan (1)')");
+  await idle(page);
+  await page.waitForTimeout(300);
+  ok((await rel("nos.lol")).includes("al día"), "tras copiar: nos.lol al día (sin firmar nada nuevo)");
+  ok((await page.evaluate(() => window.__published)).every(e => e.tags[0][1] === "wavestr/favorites"), "solo se reenvía el mismo evento");
+  await page.screenshot({ path: "/tmp/web-relays.png", fullPage: true });
+  await page.goBack(); await page.goBack();
+  await page.evaluate(() => { window.__published = []; });
 
   // Copia por partes de Usus: descifrar, ver, editar y guardar
   await page.click('.row .n:text-is("Usus")');

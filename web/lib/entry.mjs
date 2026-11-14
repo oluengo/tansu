@@ -24,6 +24,17 @@ export async function query(relays, filters, maxWait = 7000) {
   await Promise.all(filters.map(f => pool.querySync(relays, f, { maxWait }).then(list => list.forEach(e => out.set(e.id, e))).catch(() => {})));
   return [...out.values()];
 }
+/** Relay a relay: [{ url, reached, events }], para saber en cuáles está cada evento. */
+export async function queryEach(relays, filters, maxWait = 7000) {
+  return Promise.all([...new Set(relays)].map(async url => {
+    try {
+      await pool.ensureRelay(url, { connectionTimeout: Math.min(maxWait, 5000) });
+    } catch { return { url, reached: false, events: [] }; }
+    const out = new Map();
+    await Promise.all(filters.map(f => pool.querySync([url], f, { maxWait }).then(l => l.forEach(e => out.set(e.id, e))).catch(() => {})));
+    return { url, reached: true, events: [...out.values()] };
+  }));
+}
 /** Publica y devuelve cuántos relays lo aceptaron. */
 export async function publish(relays, ev) {
   const r = await Promise.allSettled(pool.publish(relays, ev));
