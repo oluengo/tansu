@@ -155,6 +155,17 @@
     <string name="value_no">no</string>
     <string name="value_empty_text">(buit)</string>
     <string name="value_empty_list">buida</string>
+    <string name="relays_where">Relays</string>
+    <string name="relay_current">al dia</string>
+    <string name="relay_older">versió antiga (%1$s)</string>
+    <string name="relay_partial">incompleta</string>
+    <string name="relay_missing">no hi és</string>
+    <string name="relay_unknown">sense resposta</string>
+    <string name="relays_sync">Copia als que en falten (%1$d)</string>
+    <string name="relays_sync_note">S\'envia el mateix esdeveniment, ja signat i xifrat: no se signa res de nou.</string>
+    <string name="relays_synced">Copiat a %1$d relays.</string>
+    <string name="relays_badge">%1$d/%2$d relays</string>
+    <string name="relays_where_note">Només es comproven els teus relays (NIP-65) i els de Tansu.</string>
     <string name="credits_title">Crèdits</string>
     <string name="credits_nostrich">Icona de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Lliure i de codi obert; vectoritzat per a la icona de Tansu</string>

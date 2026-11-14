@@ -155,6 +155,17 @@
     <string name="value_no">no</string>
     <string name="value_empty_text">(empty)</string>
     <string name="value_empty_list">empty</string>
+    <string name="relays_where">Relays</string>
+    <string name="relay_current">up to date</string>
+    <string name="relay_older">older version (%1$s)</string>
+    <string name="relay_partial">incomplete</string>
+    <string name="relay_missing">not there</string>
+    <string name="relay_unknown">no answer</string>
+    <string name="relays_sync">Copy to the ones missing it (%1$d)</string>
+    <string name="relays_sync_note">The same event is sent, already signed and encrypted: nothing new is signed.</string>
+    <string name="relays_synced">Copied to %1$d relays.</string>
+    <string name="relays_badge">%1$d/%2$d relays</string>
+    <string name="relays_where_note">Only your relays (NIP-65) and the Tansu ones are checked.</string>
     <string name="credits_title">Credits</string>
     <string name="credits_nostrich">Nostr icon: Purple Nostrich by SovrynMatt</string>
     <string name="credits_nostrich_sub">Free and open source; vectorized for the Tansu icon</string>

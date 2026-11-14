@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 (beta)
+
+- Where each item lives: every file and list shows its state on each of the account's relays (up to date, older version, incomplete, not there, no answer), and the list warns when an item is not up to date everywhere (e.g. "1/2 relays").
+- "Copy to the ones missing it": sends the same event, already signed and encrypted, to the relays that lack it or have an older version. Nothing new is signed. Android and web.
+
 ## 0.3.1 (beta)
 
 - Web: Amber connects as a remote signer (NIP-46, `nostrconnect://` link) instead of NIP-55 via link. Before, the decrypted text came back in the page address and could stay in the browser history (and get synced). Now decrypted content only lives in memory. Amber accounts added on the web need to be added again; leftovers from the previous version are cleared on opening.

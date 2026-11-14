@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.3.1" + (BETA ? " beta" : "");
+const VERSION = "0.3.2" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -190,11 +190,48 @@ async function relaysFor(pk) {
 }
 async function load(pk) {
   const relays = await relaysFor(pk);
-  const evs = (await N.query(relays, [
+  const res = await N.queryEach(relays, [
     { kinds: [APP_DATA], authors: [pk], limit: 500 },
     { kinds: Object.keys(LIST_KINDS).map(Number), authors: [pk], limit: 200 },
-  ], 8000)).filter(e => e.pubkey === pk && N.verify(e));
-  return { relays, entries: group(evs), lists: listsOf(evs), at: Date.now() };
+  ], 8000);
+  const ok = new Map(), good = e => { if (!ok.has(e.id)) ok.set(e.id, e.pubkey === pk && N.verify(e)); return ok.get(e.id); };
+  // Por relay: dirección → versión más nueva que tiene ese relay (para saber dónde está cada dato)
+  const index = {};
+  for (const r of res) {
+    const m = {};
+    for (const e of r.events.filter(good)) { const a = address(e), o = m[a]; if (!o || e.created_at > o.at || (e.created_at === o.at && e.id < o.id)) m[a] = { id: e.id, at: e.created_at }; }
+    index[r.url] = m;
+  }
+  const all = new Map(); for (const r of res) for (const e of r.events) if (good(e)) all.set(e.id, e);
+  const evs = [...all.values()];
+  return { relays, entries: group(evs), lists: listsOf(evs), at: Date.now(), reached: new Set(res.filter(r => r.reached).map(r => r.url)), index };
+}
+/** Estado de unos eventos (entrada o lista) en cada relay: current | older | partial | missing | unknown. */
+function copiesOf(sn, events) {
+  return sn.relays.map(relay => {
+    if (!sn.reached?.has(relay)) return { relay, state: "unknown" };
+    const idx = sn.index?.[relay] || {}, found = events.map(e => [idx[address(e)], e]);
+    if (found.every(([h, e]) => h?.id === e.id)) return { relay, state: "current" };
+    if (found.every(([h]) => !h)) return { relay, state: "missing" };
+    if (found.every(([h]) => h)) return { relay, state: "older", at: Math.min(...found.map(([h]) => h.at)) };
+    return { relay, state: "partial" };
+  });
+}
+const needsSync = c => c.state === "older" || c.state === "partial" || c.state === "missing";
+function relaysBadge(sn, events) {
+  const c = copiesOf(sn, events), cur = c.filter(x => x.state === "current").length, tot = c.filter(x => x.state !== "unknown").length;
+  return cur < tot ? `<span class="badge lock">${T("relays_badge", cur, tot)}</span>` : "";
+}
+function relaysGroup(sn, events, key) {
+  const c = copiesOf(sn, events), miss = c.filter(needsSync).length;
+  const lab = x => x.state === "current" ? `<span class="badge ok-b">✓ ${T("relay_current")}</span>`
+    : x.state === "older" ? `<span class="badge lock">${T("relay_older", ago(x.at))}</span>`
+    : x.state === "partial" ? `<span class="badge lock">${T("relay_partial")}</span>`
+    : x.state === "missing" ? `<span class="badge plain">✕ ${T("relay_missing")}</span>`
+    : `<span class="badge">${T("relay_unknown")}</span>`;
+  return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><div class="v mono">${esc(x.relay.replace(/^wss:\/\//, ""))}</div>${lab(x)}</div>`).join("")}
+    ${miss ? `<div style="margin-top:8px"><button class="btn" data-a="sync" data-x="${esc(key)}">${T("relays_sync", miss)}</button></div><p class="small muted">${T("relays_sync_note")}</p>` : ""}
+    <p class="small muted">${T("relays_where_note")}</p></div>`;
 }
 async function refresh() {
   const a = acc(); if (!a) return;
@@ -341,6 +378,22 @@ const OPS = {
     await publishSigned(signerOf(a), sn.relays, { kind: DELETION, created_at: at, tags, content: "" });
     sn.entries = sn.entries.filter(x => x.d !== d); delete st.opened[okey(a.pubkey, d)];
     toast(T("deleted")); st.route.pop();
+  },
+  async sync({ key }) {
+    const sn = snap(); if (!sn) throw new TErr("offline");
+    const events = key.startsWith("e:") ? sn.entries.find(x => x.d === key.slice(2))?.events : [sn.lists.find(x => address(x) === key.slice(2))].filter(Boolean);
+    if (!events?.length) throw new TErr("unreadable");
+    const targets = copiesOf(sn, events).filter(needsSync).map(c => c.relay);
+    let okRelays = new Set(targets);
+    for (const e of events) {
+      if (encoding(e.content) === "plain") throw new TErr("notenc");
+      const accepted = new Set();
+      for (const r of targets) if (await N.publish([r], e) > 0) accepted.add(r);
+      okRelays = new Set([...okRelays].filter(r => accepted.has(r)));
+    }
+    if (!okRelays.size) throw new TErr("offline");
+    toast(T("relays_synced", okRelays.size));
+    refresh();
   },
   async restore({ id, at }) {
     const item = trashCache.find(x => x.id === id); if (!item) return;
@@ -568,7 +621,7 @@ function encBadge(enc) {
 const folderRow = (name, meta, r, icon = "📁") =>
   `<button class="row" data-a="go" data-x='${J(r)}'><span class="ico f">${icon}</span><span class="t"><div class="n">${esc(name)}</div><div class="m">${esc(meta)}</div></span><span class="chev">›</span></button>`;
 const entryRow = (e, full) =>
-  `<button class="row" data-a="go" data-x='${J({ v: "item", d: e.d })}'><span class="ico">${e.enc === "nip44" || e.enc === "nip04" ? "🔒" : "📄"}</span><span class="t"><div class="n">${esc(full ? e.d : e.name)}</div><div class="m">${esc(ago(e.updated) + " · " + size(e.bytes) + (e.parts.length ? " · " + TP("parts", e.parts.length) : ""))}</div></span>${encBadge(e.enc)}</button>`;
+  `<button class="row" data-a="go" data-x='${J({ v: "item", d: e.d })}'><span class="ico">${e.enc === "nip44" || e.enc === "nip04" ? "🔒" : "📄"}</span><span class="t"><div class="n">${esc(full ? e.d : e.name)}</div><div class="m">${esc(ago(e.updated) + " · " + size(e.bytes) + (e.parts.length ? " · " + TP("parts", e.parts.length) : ""))}</div></span>${snap() ? relaysBadge(snap(), e.events) : ""}${encBadge(e.enc)}</button>`;
 const listRow = e =>
   `<button class="row" data-a="go" data-x='${J({ v: "list", addr: address(e) })}'><span class="ico">☰</span><span class="t"><div class="n">${esc(listTitle(e))}</div><div class="m">${esc(`kind ${e.kind} · ${TP("public_items", publicItems(e).length)} · ${ago(e.created_at)}`)}</div></span>${e.content ? encBadge(encoding(e.content)) : ""}</button>`;
 
@@ -623,6 +676,7 @@ function item(sn, r) {
   if (canSign(a)) h += `<button class="btn d" data-a="delask" data-x="${esc(e.d)}">${T("delete")}</button>`;
   h += `</div>`;
   if (e.enc !== "nip44" && e.enc !== "empty") h += `<p class="small muted">${T("edit_only_nip44")}</p>`;
+  h += relaysGroup(sn, e.events, "e:" + e.d);
   return h;
 }
 function edit(sn, r) {
@@ -652,6 +706,7 @@ function list(sn, r) {
     }
     if (canSign(a)) h += `<div class="acts"><button class="btn" data-a="listedit" data-x="${esc(r.addr)}">${T("edit")}</button></div>`;
     h += `<p class="small muted">${T("lists_edit_note")}</p>`;
+    h += relaysGroup(sn, [e], "l:" + r.addr);
     return h;
   }
   h += `<p class="small muted">${T("lists_edit_rules")}</p>`;
@@ -789,6 +844,7 @@ const ACT = {
   },
   npubgo: loginNpub,
   open(el) { run("open", { d: el.dataset.x }); },
+  sync(el) { run("sync", { key: el.dataset.x }); },
   openlist(el) { run("openList", { addr: el.dataset.x }); },
   export(el) {
     const a = acc(), e = snap().entries.find(x => x.d === el.dataset.x), o = st.opened[okey(a.pubkey, e.d)];

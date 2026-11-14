@@ -156,6 +156,14 @@ class Explorer(
         cache.remove(target.pubkey)
     }
 
+    /** Copia una entrada o lista (eventos ya firmados) a los relays de la cuenta donde falta. Devuelve en cuántos. */
+    suspend fun syncCopies(events: List<Event>): Result<Int> = attempt {
+        val snap = _state.value.snapshot ?: throw VaultException(VaultException.Reason.OFFLINE)
+        val n = vault.syncCopies(snap, events)
+        refresh()
+        n
+    }
+
     /** Borra en Nostr (NIP-09) tras guardar una copia local en la papelera. */
     suspend fun delete(entry: Entry): Result<Unit> = attempt {
         val a = account()

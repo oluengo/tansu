@@ -127,6 +127,24 @@ class AppDataTest {
         assertEquals(priv, Lists.parsePrivate(Lists.privateJson(priv)))
     }
 
+    @Test fun dondeEstaCadaDato() {
+        val viejo = ev("usus/backup", "a", at = 50)
+        val e = AppData.group(listOf(ev("usus/backup", "x", at = 100), ev("usus/backup/0", "y"))).single()
+        val idx = { list: List<io.github.oluengo.tansu.nostr.Event> -> list.associate { it.address to (it.id to it.createdAt) } }
+        val snap = Snapshot(
+            crypto.pubkey, listOf("wss://a", "wss://b", "wss://c", "wss://d", "wss://e"), listOf(e), emptyList(), 0,
+            reached = setOf("wss://a", "wss://b", "wss://c", "wss://d"),
+            index = mapOf("wss://a" to idx(e.events), "wss://b" to idx(listOf(viejo, e.parts[0])), "wss://c" to emptyMap(), "wss://d" to idx(e.parts)),
+        )
+        val c = snap.copies(e.events).associate { it.relay to it.state }
+        assertEquals(RelayCopy.State.CURRENT, c["wss://a"])
+        assertEquals(RelayCopy.State.OLDER, c["wss://b"])
+        assertEquals(RelayCopy.State.MISSING, c["wss://c"])
+        assertEquals(RelayCopy.State.PARTIAL, c["wss://d"])
+        assertEquals(RelayCopy.State.UNKNOWN, c["wss://e"])
+        assertEquals(50L, snap.copies(e.events).first { it.relay == "wss://b" }.olderAt)
+    }
+
     @Test fun papelera() {
         val f = File.createTempFile("trash", ".json").also { it.delete() }
         val t = Trash(f)

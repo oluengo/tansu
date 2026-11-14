@@ -155,6 +155,17 @@
     <string name="value_no">no</string>
     <string name="value_empty_text">(vacío)</string>
     <string name="value_empty_list">vacía</string>
+    <string name="relays_where">Relays</string>
+    <string name="relay_current">al día</string>
+    <string name="relay_older">versión antigua (%1$s)</string>
+    <string name="relay_partial">incompleta</string>
+    <string name="relay_missing">no está</string>
+    <string name="relay_unknown">sin respuesta</string>
+    <string name="relays_sync">Copiar a los que faltan (%1$d)</string>
+    <string name="relays_sync_note">Se envía el mismo evento, ya firmado y cifrado: no se firma nada nuevo.</string>
+    <string name="relays_synced">Copiado a %1$d relays.</string>
+    <string name="relays_badge">%1$d/%2$d relays</string>
+    <string name="relays_where_note">Solo se comprueban tus relays (NIP-65) y los de Tansu.</string>
     <string name="credits_title">Créditos</string>
     <string name="credits_nostrich">Icono de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Libre y de código abierto; vectorizado para el icono de Tansu</string>

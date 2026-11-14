@@ -27,7 +27,32 @@ class VaultException(val reason: Reason, cause: Throwable? = null) : Exception(r
 }
 
 /** Lo que hay en Nostr para una cuenta. */
-data class Snapshot(val pubkey: String, val relays: List<String>, val entries: List<Entry>, val lists: List<Event>, val loadedAt: Long)
+data class Snapshot(
+    val pubkey: String, val relays: List<String>, val entries: List<Entry>, val lists: List<Event>, val loadedAt: Long,
+    /** Relays que respondieron. */
+    val reached: Set<String> = emptySet(),
+    /** Por relay: dirección → (id, fecha) de la versión más nueva que tiene ese relay. */
+    val index: Map<String, Map<String, Pair<String, Long>>> = emptyMap(),
+) {
+    /** Estado de [events] (una entrada o una lista) en cada relay de la cuenta. */
+    fun copies(events: List<Event>): List<RelayCopy> = relays.map { r ->
+        if (r !in reached) return@map RelayCopy(r, RelayCopy.State.UNKNOWN)
+        val idx = index[r].orEmpty()
+        val found = events.map { idx[it.address] to it }
+        when {
+            found.all { (have, e) -> have?.first == e.id } -> RelayCopy(r, RelayCopy.State.CURRENT)
+            found.all { (have, _) -> have == null } -> RelayCopy(r, RelayCopy.State.MISSING)
+            found.all { (have, _) -> have != null } -> RelayCopy(r, RelayCopy.State.OLDER, found.minOf { it.first!!.second })
+            else -> RelayCopy(r, RelayCopy.State.PARTIAL)
+        }
+    }
+}
+
+/** Dónde está cada dato. OLDER: tiene una versión anterior ([olderAt]); PARTIAL: le faltan partes. */
+data class RelayCopy(val relay: String, val state: State, val olderAt: Long? = null) {
+    enum class State { CURRENT, OLDER, PARTIAL, MISSING, UNKNOWN }
+    val needsSync: Boolean get() = state == State.OLDER || state == State.PARTIAL || state == State.MISSING
+}
 
 /** Nombre e imagen públicos de una cuenta (kind 0), solo para reconocerla en la lista. */
 data class Profile(val name: String?, val picture: String?)
@@ -55,15 +80,25 @@ class Vault(private val pool: RelayPool) {
 
     suspend fun load(pubkey: String): Snapshot {
         val relays = relaysFor(pubkey)
-        val events = pool.query(
+        val results = pool.queryEach(
             relays,
             listOf(
                 Filter(kinds = listOf(Kinds.APP_DATA), authors = listOf(pubkey), limit = 500),
                 Filter(kinds = Lists.KINDS.keys.toList(), authors = listOf(pubkey), limit = 200),
             ),
             timeoutMs = 8_000,
-        ).filter { it.pubkey == pubkey && EventSigning.verify(it) }
-        return Snapshot(pubkey, relays, AppData.group(events), Lists.latest(events), System.currentTimeMillis())
+        )
+        val verified = HashMap<String, Boolean>()
+        fun ok(e: Event) = verified.getOrPut(e.id) { e.pubkey == pubkey && EventSigning.verify(e) }
+        val index = results.associate { r ->
+            r.url to r.events.filter(::ok).groupBy { it.address }
+                .mapValues { (_, l) -> l.maxWith(compareBy<Event> { it.createdAt }.thenByDescending { it.id }).let { it.id to it.createdAt } }
+        }
+        val events = results.flatMap { it.events }.distinctBy { it.id }.filter(::ok)
+        return Snapshot(
+            pubkey, relays, AppData.group(events), Lists.latest(events), System.currentTimeMillis(),
+            reached = results.filter { it.reached }.map { it.url }.toSet(), index = index,
+        )
     }
 
     suspend fun profiles(pubkeys: List<String>): Map<String, Profile> {
@@ -159,6 +194,23 @@ class Vault(private val pool: RelayPool) {
         }
         val at = maxOf(now(), original.createdAt + 1)
         return publish(crypto, relays, EventSigning.unsigned(crypto.pubkey, original.kind, Lists.metaTags(original) + public, content, at))
+    }
+
+    /**
+     * Copia [events] tal cual (ya firmados y cifrados) a los relays donde faltan o están anticuados.
+     * No firma nada nuevo. Devuelve en cuántos relays quedó completo.
+     */
+    suspend fun syncCopies(snapshot: Snapshot, events: List<Event>): Int {
+        val targets = snapshot.copies(events).filter { it.needsSync }.map { it.relay }
+        if (targets.isEmpty()) return 0
+        var okRelays = targets.toSet()
+        for (e in events) {
+            if (detectEncoding(e.content) == Encoding.PLAIN) throw VaultException(VaultException.Reason.NOT_ENCRYPTED)
+            val accepted = targets.filter { pool.publish(listOf(it), e) > 0 }.toSet()
+            okRelays = okRelays intersect accepted
+        }
+        if (okRelays.isEmpty()) throw VaultException(VaultException.Reason.OFFLINE)
+        return okRelays.size
     }
 
     /** Petición de borrado (NIP-09) de todos los eventos de la entrada. */
