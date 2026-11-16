@@ -166,6 +166,14 @@
     <string name="relays_synced">Copiado a %1$d relays.</string>
     <string name="relays_badge">%1$d/%2$d relays</string>
     <string name="relays_where_note">Solo se comprueban tus relays (NIP-65) y los de Tansu.</string>
+    <string name="relay_copy_here">Copiar aquí</string>
+    <string name="relay_delete_here">Borrar de este relay</string>
+    <string name="relay_copy_other">Copiar a otro relay…</string>
+    <string name="relay_copied_to">Copiado a %1$s.</string>
+    <string name="relay_copied_hint">Para ver su estado aquí, añádelo en Ajustes → Relays.</string>
+    <string name="relay_delete_title">¿Borrar de %1$s?</string>
+    <string name="relay_delete_body">Se envía una petición de borrado (NIP-09) solo a este relay; los demás no cambian. Antes se guarda una copia en la papelera.</string>
+    <string name="relay_deleted">Petición de borrado enviada a %1$s.</string>
     <string name="credits_title">Créditos</string>
     <string name="credits_nostrich">Icono de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Libre y de código abierto; vectorizado para el icono de Tansu</string>

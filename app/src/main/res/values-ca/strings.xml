@@ -166,6 +166,14 @@
     <string name="relays_synced">Copiat a %1$d relays.</string>
     <string name="relays_badge">%1$d/%2$d relays</string>
     <string name="relays_where_note">Només es comproven els teus relays (NIP-65) i els de Tansu.</string>
+    <string name="relay_copy_here">Copia-ho aquí</string>
+    <string name="relay_delete_here">Esborra d\'aquest relay</string>
+    <string name="relay_copy_other">Copia a un altre relay…</string>
+    <string name="relay_copied_to">Copiat a %1$s.</string>
+    <string name="relay_copied_hint">Per veure\'n l\'estat aquí, afegeix-lo a Configuració → Relays.</string>
+    <string name="relay_delete_title">Vols esborrar-ho de %1$s?</string>
+    <string name="relay_delete_body">S\'envia una petició d\'esborrament (NIP-09) només a aquest relay; els altres no canvien. Abans es desa una còpia a la paperera.</string>
+    <string name="relay_deleted">Petició d\'esborrament enviada a %1$s.</string>
     <string name="credits_title">Crèdits</string>
     <string name="credits_nostrich">Icona de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Lliure i de codi obert; vectoritzat per a la icona de Tansu</string>

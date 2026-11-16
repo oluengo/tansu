@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.3.2" + (BETA ? " beta" : "");
+const VERSION = "0.3.3" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -229,9 +229,12 @@ function relaysGroup(sn, events, key) {
     : x.state === "partial" ? `<span class="badge lock">${T("relay_partial")}</span>`
     : x.state === "missing" ? `<span class="badge plain">✕ ${T("relay_missing")}</span>`
     : `<span class="badge">${T("relay_unknown")}</span>`;
-  return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><div class="v mono">${esc(x.relay.replace(/^wss:\/\//, ""))}</div>${lab(x)}</div>`).join("")}
-    ${miss ? `<div style="margin-top:8px"><button class="btn" data-a="sync" data-x="${esc(key)}">${T("relays_sync", miss)}</button></div><p class="small muted">${T("relays_sync_note")}</p>` : ""}
-    <p class="small muted">${T("relays_where_note")}</p></div>`;
+  const signer = canSign(acc());
+  const acts = x => x.state === "unknown" ? "" : (needsSync(x) ? `<button class="btn t small" data-a="relaycopy" data-x='${J({ key, relay: x.relay })}'>${T("relay_copy_here")}</button>` : "")
+    + (signer && ["current", "older", "partial"].includes(x.state) ? `<button class="btn t small danger" data-a="relaydelask" data-x='${J({ key, relay: x.relay })}'>${T("delete")}</button>` : "");
+  return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><div class="v mono">${esc(x.relay.replace(/^wss:\/\//, ""))}</div>${lab(x)}${acts(x)}</div>`).join("")}
+    <div class="acts" style="margin:8px 0 0">${miss ? `<button class="btn" data-a="sync" data-x="${esc(key)}">${T("relays_sync", miss)}</button>` : ""}<button class="btn t" data-a="relayother" data-x="${esc(key)}">${T("relay_copy_other")}</button></div>
+    <p class="small muted">${T("relays_sync_note")} ${T("relays_where_note")}</p></div>`;
 }
 async function refresh() {
   const a = acc(); if (!a) return;
@@ -300,6 +303,14 @@ async function writeEntry(a, relays, d, text, manifest, oldParts, at) {
     await publishSigned(s, relays, { kind: APP_DATA, created_at: at, tags: [["d", dd]], content: enc });
   }
   if (extra.length) try { await publishSigned(s, relays, { kind: DELETION, created_at: at, tags: [...extra.map(x => ["a", `${APP_DATA}:${me}:${x}`]), ["k", String(APP_DATA)]], content: "" }); } catch {}
+}
+
+/** Eventos de una entrada ("e:<d>") o lista ("l:<dirección>") de la cuenta activa. */
+function eventsOf(key) {
+  const sn = snap(); if (!sn) throw new TErr("offline");
+  const ev = key.startsWith("e:") ? sn.entries.find(x => x.d === key.slice(2))?.events : [sn.lists.find(x => address(x) === key.slice(2))].filter(Boolean);
+  if (!ev?.length) throw new TErr("unreadable");
+  return ev;
 }
 
 // ---------- Papelera (IndexedDB; solo en este navegador) ----------
@@ -379,10 +390,25 @@ const OPS = {
     sn.entries = sn.entries.filter(x => x.d !== d); delete st.opened[okey(a.pubkey, d)];
     toast(T("deleted")); st.route.pop();
   },
+  async copyRelay({ key, relay }) {
+    const events = eventsOf(key);
+    if (events.some(e => encoding(e.content) === "plain")) throw new TErr("notenc");
+    for (const e of events) if (await N.publish([relay], e) === 0) throw new TErr("offline");
+    toast(T("relay_copied_to", relay.replace(/^wss:\/\//, "")) + (snap().relays.includes(relay) ? "" : " " + T("relay_copied_hint")), 5000);
+    refresh();
+  },
+  async delRelay({ key, relay, at, tid }) {
+    const a = acc(), events = eventsOf(key);
+    const label = key.startsWith("e:") ? key.slice(2) : (tag(events[0], "title") || tag(events[0], "d") || "kind " + events[0].kind);
+    await toTrash(a.pubkey, label, events, tid);
+    const tags = [...events.flatMap(x => [["e", x.id], ["a", address(x)]]), ...[...new Set(events.map(x => x.kind))].map(k => ["k", String(k)])];
+    await publishSigned(signerOf(a), [relay], { kind: DELETION, created_at: at, tags, content: "" });
+    toast(T("relay_deleted", relay.replace(/^wss:\/\//, "")));
+    refresh();
+  },
   async sync({ key }) {
     const sn = snap(); if (!sn) throw new TErr("offline");
-    const events = key.startsWith("e:") ? sn.entries.find(x => x.d === key.slice(2))?.events : [sn.lists.find(x => address(x) === key.slice(2))].filter(Boolean);
-    if (!events?.length) throw new TErr("unreadable");
+    const events = eventsOf(key);
     const targets = copiesOf(sn, events).filter(needsSync).map(c => c.relay);
     let okRelays = new Set(targets);
     for (const e of events) {
@@ -845,6 +871,21 @@ const ACT = {
   npubgo: loginNpub,
   open(el) { run("open", { d: el.dataset.x }); },
   sync(el) { run("sync", { key: el.dataset.x }); },
+  relaycopy(el) { run("copyRelay", JSON.parse(el.dataset.x)); },
+  relaydelask(el) {
+    const o = JSON.parse(el.dataset.x), host = o.relay.replace(/^wss:\/\//, "");
+    confirmDlg(T("relay_delete_title", host), T("relay_delete_body"), T("delete"), () => run("delRelay", o), true);
+  },
+  relayother(el) {
+    dialog(`<h3>${T("relay_copy_other")}</h3><input id="other-in" class="in mono" placeholder="wss://relay.example.com" autocapitalize="off"><div id="other-err" class="err"></div><p class="small muted">${T("relay_copied_hint")}</p>
+      <div class="acts"><button class="btn" data-a="close">${T("cancel")}</button><button class="btn p" data-a="relayothergo" data-x="${esc(el.dataset.x)}">${T("copy")}</button></div>`);
+    $("#other-in").focus();
+  },
+  relayothergo(el) {
+    const r = normRelay($("#other-in").value);
+    if (!r) { $("#other-err").textContent = T("relay_invalid"); return; }
+    closeLayer(); run("copyRelay", { key: el.dataset.x, relay: r });
+  },
   openlist(el) { run("openList", { addr: el.dataset.x }); },
   export(el) {
     const a = acc(), e = snap().entries.find(x => x.d === el.dataset.x), o = st.opened[okey(a.pubkey, e.d)];

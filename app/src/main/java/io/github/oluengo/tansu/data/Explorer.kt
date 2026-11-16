@@ -164,6 +164,22 @@ class Explorer(
         n
     }
 
+    /** Copia los eventos tal cual a un relay concreto (puede ser uno que no esté en la lista de la cuenta). */
+    suspend fun copyToRelay(events: List<Event>, relay: String): Result<Int> = attempt {
+        val n = vault.copyTo(listOf(relay), events)
+        refresh()
+        n
+    }
+
+    /** Borra solo de un relay (NIP-09 enviado únicamente a ese relay). Antes guarda copia en la papelera. */
+    suspend fun deleteFromRelay(events: List<Event>, label: String, relay: String): Result<Unit> = attempt {
+        val a = account()
+        if (!a.canSign) throw VaultException(VaultException.Reason.READ_ONLY)
+        trash.add(a.pubkey, label, events)
+        vault.deleteFrom(signer.crypto(a), listOf(relay), events)
+        refresh()
+    }
+
     /** Borra en Nostr (NIP-09) tras guardar una copia local en la papelera. */
     suspend fun delete(entry: Entry): Result<Unit> = attempt {
         val a = account()

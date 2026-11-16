@@ -213,6 +213,19 @@ class Vault(private val pool: RelayPool) {
         return okRelays.size
     }
 
+    /** Copia [events] tal cual (ya firmados y cifrados) a [relays] concretos. Devuelve en cuántos quedó completo. */
+    suspend fun copyTo(relays: List<String>, events: List<Event>): Int {
+        if (events.any { detectEncoding(it.content) == Encoding.PLAIN }) throw VaultException(VaultException.Reason.NOT_ENCRYPTED)
+        var ok = relays.toSet()
+        for (e in events) ok = ok intersect relays.filter { pool.publish(listOf(it), e) > 0 }.toSet()
+        if (ok.isEmpty()) throw VaultException(VaultException.Reason.OFFLINE)
+        return ok.size
+    }
+
+    /** Petición de borrado (NIP-09) solo a [relays] concretos; los demás no cambian. */
+    suspend fun deleteFrom(crypto: AccountCrypto, relays: List<String>, events: List<Event>): Event =
+        publish(crypto, relays, EventSigning.unsigned(crypto.pubkey, Kinds.DELETION, AppData.deletionTags(events), ""))
+
     /** Petición de borrado (NIP-09) de todos los eventos de la entrada. */
     suspend fun delete(crypto: AccountCrypto, relays: List<String>, entry: Entry): Event =
         publish(crypto, relays, EventSigning.unsigned(crypto.pubkey, Kinds.DELETION, AppData.deletionTags(entry.events), ""))

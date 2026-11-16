@@ -95,5 +95,5 @@ object AppData {
 
     /** Etiquetas de una petición de borrado (NIP-09) para todos los eventos de una entrada. */
     fun deletionTags(events: List<Event>): List<List<String>> =
-        events.flatMap { listOf(listOf("e", it.id), listOf("a", it.address)) } + listOf(listOf("k", Kinds.APP_DATA.toString()))
+        events.flatMap { listOf(listOf("e", it.id), listOf("a", it.address)) } + events.map { it.kind }.distinct().map { listOf("k", it.toString()) }
 }

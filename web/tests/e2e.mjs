@@ -92,6 +92,20 @@ try {
   await page.waitForTimeout(300);
   ok((await rel("nos.lol")).includes("al día"), "tras copiar: nos.lol al día (sin firmar nada nuevo)");
   ok((await page.evaluate(() => window.__published)).every(e => e.tags[0][1] === "wavestr/favorites"), "solo se reenvía el mismo evento");
+  // Borrar solo de un relay
+  await page.locator(".tagrow", { hasText: "nos.lol" }).locator("button:text('Eliminar')").click();
+  await page.click(".dialog button:text('Eliminar')");
+  await idle(page); await page.waitForTimeout(300);
+  ok((await rel("nos.lol")).includes("no está") && (await rel("relay.damus.io")).includes("al día"), "borrado solo de nos.lol; damus sigue al día");
+  const del = (await page.evaluate(() => window.__published)).find(e => e.kind === 5);
+  ok(!!del && del.tags.some(t => t[0] === "a" && t[1].endsWith(":wavestr/favorites")), "petición de borrado NIP-09 firmada");
+  ok(await page.evaluate(() => (JSON.parse(localStorage.getItem("__relays"))["wss://relay.damus.io"] || []).every(e => e.kind !== 5)), "la petición de borrado solo fue a nos.lol");
+  // Copiar a un relay que no es de la cuenta
+  await page.click("button:text('Copiar a otro relay…')");
+  await page.fill("#other-in", "otro.example.com");
+  await page.click(".dialog button:text('Copiar')");
+  await idle(page);
+  ok(await page.evaluate(() => (JSON.parse(localStorage.getItem("__relays"))["wss://otro.example.com"] || []).some(e => (e.tags[0] || [])[1] === "wavestr/favorites")), "copiado a otro relay indicado a mano");
   await page.screenshot({ path: "/tmp/web-relays.png", fullPage: true });
   await page.goBack(); await page.goBack();
   await page.evaluate(() => { window.__published = []; });
