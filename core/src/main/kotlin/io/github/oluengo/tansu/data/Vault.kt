@@ -37,6 +37,8 @@ data class Snapshot(
     val latency: Map<String, Long> = emptyMap(),
     /** Relays de la lista NIP-65 de la cuenta (el resto son los de Tansu). */
     val own: Set<String> = emptySet(),
+    /** Relays que devolvieron tantos eventos que quizá cortaron la lista (no se usan para detectar pérdidas). */
+    val truncated: Set<String> = emptySet(),
 ) {
     /** Todo lo que hay en la cuenta, como grupos de eventos (cada entrada o lista). */
     val items: List<List<Event>> get() = entries.map { it.events } + lists.map { listOf(it) }
@@ -125,6 +127,7 @@ class Vault(private val pool: RelayPool) {
             reached = results.filter { it.reached }.map { it.url }.toSet(), index = index,
             latency = results.mapNotNull { r -> r.ms?.let { r.url to it } }.toMap(),
             own = own.toSet(),
+            truncated = results.filter { r -> r.events.count { it.kind == Kinds.APP_DATA } >= 450 || r.events.count { it.kind != Kinds.APP_DATA } >= 190 }.map { it.url }.toSet(),
         )
     }
 

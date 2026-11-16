@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.7 (beta)
+
+- Relay reliability, with 1 to 5 stars (filled in colour = points, grey = missing) in the relay list, in each relay's sheet and when adding a relay. Four signals with fixed weights: availability 40% (NIP-66 monitors, kind 30166, plus your own history of loads), keeps your data 30%, used by people you follow 20% (their NIP-65 lists) and speed 10%. A missing signal shares its weight among the others ("provisional rating"); with fewer than two there are no stars. "How is it calculated?" shows the points of each signal.
+- Backups first: if a relay has lost data of yours without you deleting it, it gets at most 3 stars and a warning ("do not use it as your only copy"). What you delete from a relay yourself does not count.
+- New "Unreliable" filter in the relay list; summary line per relay (online, followed, % answered, lost).
+- The history (whether each relay answered and which items it had, by address only, never content) stays on this device.
+
 ## 0.3.6 (beta)
 
 - Copying to a relay no longer sends everything at once. The relay sheet, opened from an item, offers "Copy this item here" first, and "Choose what to copy here…" opens a picker.

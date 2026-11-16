@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.3.6" + (BETA ? " beta" : "");
+const VERSION = "0.3.7" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -60,7 +60,7 @@ const st = {
   active: LS.get(P + "active", null),
   settings: Object.assign({ theme: "system", accent: "indigo", relays: null }, LS.get(P + "settings", {})),
   profiles: LS.get(P + "profiles", {}),
-  snaps: {}, loading: false, failed: false, info: {},
+  snaps: {}, loading: false, failed: false, info: {}, mon: {}, monAsked: {}, follows: {},
   opened: {}, listPriv: {},
   route: [{ v: "home" }], q: "",
   busy: null, draft: null, edit: null, install: null,
@@ -207,7 +207,8 @@ async function load(pk) {
   const all = new Map(); for (const r of res) for (const e of r.events) if (good(e)) all.set(e.id, e);
   const evs = [...all.values()];
   return { relays, entries: group(evs), lists: listsOf(evs), at: Date.now(), reached: new Set(res.filter(r => r.reached).map(r => r.url)), index,
-    latency: Object.fromEntries(res.filter(r => r.ms != null).map(r => [r.url, r.ms])), own: new Set(own) };
+    latency: Object.fromEntries(res.filter(r => r.ms != null).map(r => [r.url, r.ms])), own: new Set(own), pubkey: pk,
+    truncated: new Set(res.filter(r => r.events.filter(e => e.kind === APP_DATA).length >= 450 || r.events.filter(e => e.kind !== APP_DATA).length >= 190).map(r => r.url)) };
 }
 /** Estado de unos eventos (entrada o lista) en cada relay: current | older | partial | missing | unknown. */
 function copiesOf(sn, events) {
@@ -280,7 +281,8 @@ function relaySheet(r, curKey) {
   if (!known) h += `<p class="muted">${T("loading")}</p>`;
   else if (!i) h += `<p class="muted">${T("ri_none")}</p>`;
   if (inAcc && !sn.reached.has(r)) h += `<p class="err">${T("ri_down")}</p><button class="btn t" data-a="relayretry" data-x="${esc(r)}">${T("retry")}</button>`;
-  h += warnings(r).map(w => `<div class="warn small">⚠ ${esc(w)}</div>`).join("");
+  h += [...warnings(r), ...(signalsOf(r).lost > 0 ? [T("rel_w_lost")] : [])].map(w => `<div class="warn small">⚠ ${esc(w)}</div>`).join("");
+  h += reliability(r);
   if (i) {
     h += `<div class="sec">${T("ri_access")}</div><dl class="info">`
       + row(T("ri_payment"), paidOf(i) ? T("ri_paid") : i.payment === false ? T("ri_free") : unk)
@@ -319,7 +321,7 @@ function relaySheet(r, curKey) {
       : `<button class="btn block" data-a="addrelayx" data-x="${esc(r)}">${T("ri_add_tansu")}</button>`) + `</div>`;
   return h + `<p class="small muted">${T("ri_note")}</p>`;
 }
-function openRelay(r, k) { sheet(`<div id="ri">${relaySheet(r, k)}</div>`); if (!(r in st.info)) infoOf(r).then(() => { const el = $("#ri"); if (el) el.innerHTML = relaySheet(r, k); }); }
+function openRelay(r, k) { sheet(`<div id="ri" data-r="${esc(r)}" data-k="${esc(k || "")}">${relaySheet(r, k)}</div>`); if (!(r in st.info)) infoOf(r).then(() => { const el = $("#ri"); if (el) el.innerHTML = relaySheet(r, k); }); }
 function labelOf(ev) { const m = ev[ev.length - 1], e = snap()?.entries.find(x => x.main.id === m.id); return e ? e.d : listTitle(m); }
 
 // ---------- Elegir qué copiar a un relay ----------
@@ -376,14 +378,14 @@ function pickBody() {
   $("#pk-bar").innerHTML = `<div class="small muted">${ch.length ? `${TP("pk_items", ch.length)} · ${TP("pk_events", ev)} · ${size(ch.reduce((a, x) => a + x.bytes, 0))}` : T("pk_choose")}</div>
     <button class="btn p block" data-a="pkgo" ${ch.length ? "" : "disabled"}>${ch.length ? T("pk_go", ch.length, host(p.relay)) : T("pk_choose")}</button>`;
 }
-const FILTERS = [["all", "ri_f_all"], ["paid", "ri_f_paid"], ["auth", "ri_f_auth"], ["nodel", "ri_f_nodel"], ["down", "ri_f_down"]];
+const FILTERS = [["all", "ri_f_all"], ["paid", "ri_f_paid"], ["auth", "ri_f_auth"], ["nodel", "ri_f_nodel"], ["down", "ri_f_down"], ["low", "rel_f_low"]];
 function relays(sn, r) {
   const f = r.f || "all", all = [...new Set([...sn.relays, ...appRelays()])];
-  const shown = all.filter(u => { const i = st.info[u]; return f === "all" || (f === "paid" && paidOf(i)) || (f === "auth" && i?.auth === true) || (f === "nodel" && delOf(i) === false) || (f === "down" && sn.relays.includes(u) && !sn.reached.has(u)); });
+  const shown = all.filter(u => { const i = st.info[u]; return f === "all" || (f === "paid" && paidOf(i)) || (f === "auth" && i?.auth === true) || (f === "nodel" && delOf(i) === false) || (f === "down" && sn.relays.includes(u) && !sn.reached.has(u)) || (f === "low" && (ratingOf(signalsOf(u))?.stars ?? 5) <= 2); });
   let h = `<p class="small muted" style="padding:4px 10px">${T("ri_list_note")}</p><div class="chips filters">${FILTERS.map(([k, l]) => `<button class="${k === f ? "on" : ""}" data-a="rfilter" data-x="${k}">${T(l)}</button>`).join("")}</div>`;
   if (!shown.length) h += `<p class="muted" style="padding:10px">${T("ri_empty_filter")}</p>`;
   h += shown.map(u => { const i = st.info[u], s = statsOf(sn, u), rej = N.rejections[u];
-    return `<button class="group rcard" data-a="relayinfo" data-x="${esc(u)}"><div class="rhead"><span class="t"><b>${esc(i?.name || host(u))}</b>${i?.name && i.name !== host(u) ? `<div class="mono small muted">${esc(host(u))}</div>` : ""}</span><span class="small muted">${esc(roleOf(sn, u))}</span></div>${relayChips(u, sn)}${s ? `<div class="small">${T("ri_stats", ...s)}</div>` : ""}${rej ? `<div class="warn small">⚠ ${esc(T("ri_w_reject", rej.slice(0, 120)))}</div>` : ""}</button>`; }).join("");
+    return `<button class="group rcard" data-a="relayinfo" data-x="${esc(u)}"><div class="rhead"><span class="t"><b>${esc(i?.name || host(u))}</b>${i?.name && i.name !== host(u) ? `<div class="mono small muted">${esc(host(u))}</div>` : ""}</span>${starsHtml(ratingOf(signalsOf(u))?.stars)}</div>${summaryLine(signalsOf(u))}<div style="margin-top:6px">${relayChips(u, sn)}</div><div class="small muted">${esc(roleOf(sn, u))}</div>${s ? `<div class="small">${T("ri_stats", ...s)}</div>` : ""}${rej ? `<div class="warn small">⚠ ${esc(T("ri_w_reject", rej.slice(0, 120)))}</div>` : ""}</button>`; }).join("");
   return h + `<div class="stack" style="padding:0 4px"><button class="btn block" data-a="addrelaydlg">+ ${T("ri_add_relay")}</button></div>`;
 }
 function relaysGroup(sn, events, key) {
@@ -404,14 +406,125 @@ function relaysGroup(sn, events, key) {
 async function refresh() {
   const a = acc(); if (!a) return;
   st.loading = true; st.failed = false; render();
-  try { st.snaps[a.pubkey] = await load(a.pubkey); } catch { if (!st.snaps[a.pubkey]) st.failed = true; }
+  try { st.snaps[a.pubkey] = await load(a.pubkey); Stats.record(st.snaps[a.pubkey]); } catch { if (!st.snaps[a.pubkey]) st.failed = true; }
   st.loading = false; render();
+  const sn0 = snap();
+  if (sn0) { askMonitors([...new Set([...sn0.relays, ...appRelays()])]); if (!(a.pubkey in st.follows)) loadFollows(a.pubkey, sn0.relays); }
   // Fichas NIP-11 que aún no tenemos (se guardan mientras la página está abierta)
   const miss = (snap()?.relays || []).filter(r => !(r in st.info));
   if (miss.length) await Promise.all(miss.map(async r => { st.info[r] = await N.relayInfo(r); }));
   if (miss.length) render();
 }
-async function infoOf(r) { if (!(r in st.info)) { st.info[r] = await N.relayInfo(r); } return st.info[r]; }
+async function infoOf(r) { askMonitors([r]); if (!(r in st.info)) { st.info[r] = await N.relayInfo(r); } return st.info[r]; }
+
+// ---------- Fiabilidad de los relays ----------
+// Historial local (solo en este navegador): si respondió, qué datos tenía cada relay y cuáles perdió sin que los borraras.
+const Stats = {
+  d: null,
+  get() { return this.d ||= Object.assign({ seen: {}, had: {}, lost: {} }, LS.get(P + "relaystats") || {}); },
+  save() { const d = this.get(), cut = now() - 90 * 86400; for (const r in d.lost) for (const a in d.lost[r]) if (d.lost[r][a] < cut) delete d.lost[r][a]; LS.set(P + "relaystats", d); },
+  record(sn) {
+    const d = this.get(), every = new Set(Object.values(sn.index).flatMap(m => Object.keys(m))), mine = d.had[sn.pubkey] ||= {};
+    for (const r of sn.relays) {
+      d.seen[r] = ((d.seen[r] || "") + (sn.reached.has(r) ? "1" : "0")).slice(-30);
+      if (!sn.reached.has(r) || sn.truncated.has(r)) continue;
+      const has = new Set(Object.keys(sn.index[r] || {}));
+      for (const a of mine[r] || []) if (!has.has(a) && every.has(a)) { const l = d.lost[r] ||= {}; if (!(a in l)) l[a] = now(); }
+      mine[r] = [...has];
+    }
+    this.save();
+  },
+  forget(pk, addrs, relay) { const m = this.get().had[pk]; if (!m) return; for (const r in m) if (!relay || r === relay) m[r] = m[r].filter(a => !addrs.includes(a)); this.save(); },
+  history(r) { const s = this.get().seen[r]; return s ? [s.split("").filter(x => x === "1").length, s.length] : null; },
+  retention(pk, r) {
+    const l = Object.keys(this.get().lost[r] || {}).filter(a => a.split(":")[1] === pk), h = this.get().had[pk]?.[r] || [];
+    const kept = new Set([...h, ...l]).size;
+    return kept ? [l.length, kept] : null;
+  },
+};
+const MONITOR_RELAYS = ["wss://relay.nostr.watch", "wss://history.nostr.watch", "wss://monitorlizard.nostr1.com", "wss://relaypag.es"];
+/** Monitores NIP-66 (eventos 30166) de los últimos 7 días; «en línea» = aviso de las últimas 3 h. */
+async function askMonitors(relays) {
+  const t = Date.now(), todo = relays.filter(r => (st.monAsked[r] || 0) < t - 30 * 60000);
+  if (!todo.length) return;
+  todo.forEach(r => st.monAsked[r] = t);
+  try {
+    const evs = (await N.query(MONITOR_RELAYS, [{ kinds: [30166], "#d": todo.flatMap(r => [r, r + "/"]), since: now() - 7 * 86400, limit: 2000 }], 7000)).filter(N.verify);
+    const by = {};
+    for (const e of evs) { const r = normRelay(tag(e, "d") || ""); if (!r) continue; const m = by[r] ||= {}; if (!m[e.pubkey] || m[e.pubkey].created_at < e.created_at) m[e.pubkey] = e; }
+    for (const [r, m] of Object.entries(by)) {
+      const l = Object.values(m), rtt = l.map(e => +(e.tags.find(x => x[0] === "rtt-open") || [])[1]).filter(Number.isFinite).sort((a, b) => a - b);
+      st.mon[r] = { online: l.filter(e => e.created_at > now() - 3 * 3600).length, total: l.length, last: Math.max(...l.map(e => e.created_at)), ms: rtt.length ? rtt[Math.floor(rtt.length / 2)] : null };
+    }
+    render(); refreshSheet();
+  } catch {}
+}
+/** Relay → cuántas cuentas de las que sigues lo tienen en su lista NIP-65. */
+async function loadFollows(pk, relays) {
+  st.follows[pk] = null;
+  try {
+    const c = (await N.query([...new Set([...relays, ...INDEXERS])], [{ kinds: [3], authors: [pk], limit: 1 }], 6000)).filter(e => e.pubkey === pk).sort((a, b) => b.created_at - a.created_at)[0];
+    const fol = [...new Set((c?.tags || []).filter(t => t[0] === "p" && /^[0-9a-f]{64}$/i.test(t[1] || "")).map(t => t[1].toLowerCase()))].slice(0, 1000);
+    const out = {};
+    if (fol.length) {
+      const lists = [];
+      for (let i = 0; i < fol.length; i += 250) lists.push(...await N.query([...INDEXERS, ...relays.slice(0, 3)], [{ kinds: [RELAY_LIST], authors: fol.slice(i, i + 250) }], 8000));
+      const latest = {}; for (const e of lists) if (!latest[e.pubkey] || latest[e.pubkey].created_at < e.created_at) latest[e.pubkey] = e;
+      for (const e of Object.values(latest)) for (const r of new Set(e.tags.filter(t => t[0] === "r" && t[1]).map(t => normRelay(t[1])).filter(Boolean))) out[r] = (out[r] || 0) + 1;
+    }
+    st.follows[pk] = out;
+  } catch { st.follows[pk] = {}; }
+  render(); refreshSheet();
+}
+function signalsOf(r) {
+  const sn = snap(), m = st.mon[r], h = Stats.history(r), k = acc() ? Stats.retention(acc().pubkey, r) : null, f = st.follows[acc()?.pubkey];
+  return { monOnline: m?.online, monTotal: m?.total, monLast: m?.last, histOk: h?.[0], histTotal: h?.[1], lost: k?.[0], kept: k?.[1],
+    follows: f ? (f[r] || 0) : null, counting: f === null, ms: sn?.latency?.[r] ?? m?.ms ?? null };
+}
+const W = { avail: 40, keep: 30, follows: 20, speed: 10 };
+/** Igual que RelayRating en Android: 4 señales con peso fijo; si falta alguna, su peso se reparte; con pérdidas, como mucho 3★. */
+function ratingOf(s) {
+  const mon = s.monTotal ? s.monOnline / s.monTotal : null, hist = (s.histTotal || 0) >= 3 ? s.histOk / s.histTotal : null;
+  const v = {
+    avail: mon == null ? hist : hist == null ? mon : 0.4 * mon + 0.6 * hist,
+    keep: s.lost == null || !s.kept ? null : Math.max(0, 1 - s.lost / s.kept * 2),
+    follows: s.follows == null ? null : Math.min(1, Math.log10(1 + s.follows) / Math.log10(51)),
+    speed: s.ms == null ? null : Math.max(0, Math.min(1, (1500 - s.ms) / 1200)),
+  };
+  const ks = Object.keys(W).filter(k => v[k] != null);
+  if (ks.length < 2) return null;
+  const score = ks.reduce((a, k) => a + v[k] * W[k], 0) / ks.reduce((a, k) => a + W[k], 0);
+  const raw = Math.min(5, Math.max(1, Math.round(score * 5))), capped = (s.lost || 0) > 0 && raw > 3;
+  return { score, stars: capped ? 3 : raw, capped, partial: ks.length < 4, ...v };
+}
+const STAR = on => `<svg viewBox="0 0 24 24"><path class="${on ? "on-s" : "off-s"}" d="M12 2.6l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.3l-5.9 3.2 1.3-6.5L2.5 9.4l6.6-.8z"/></svg>`;
+const starsHtml = (n, big) => n == null ? `<span class="small muted">${T("rel_nodata")}</span>`
+  : `<span class="stars${big ? " big" : ""}" role="img" aria-label="${T("rel_stars", n)}">${[1, 2, 3, 4, 5].map(i => STAR(i <= n)).join("")}</span>`;
+function summaryLine(s) {
+  const p = [], mon = s.monTotal ? s.monOnline / s.monTotal : null;
+  if (mon != null) p.push(mon < .5 ? `<span style="color:var(--danger)">${T("rel_down")}</span>` : `<span style="color:#2E8A5A">${T("rel_online")}</span>`);
+  if (s.follows != null) p.push(T("rel_follows_short", s.follows));
+  if ((s.histTotal || 0) >= 3) p.push(T("rel_answered", Math.round(s.histOk * 100 / s.histTotal) + "%"));
+  if (s.lost > 0) p.push(`<span style="color:var(--lock)">${T("rel_lost_short", s.lost)}</span>`);
+  return p.length ? `<div class="small" style="margin-top:4px">${p.join(" · ")}</div>` : "";
+}
+function reliability(r) {
+  const s = signalsOf(r), g = ratingOf(s), pc = x => Math.round(x * 100) + "%";
+  const sig = (ic, title, body, v) => `<div class="sig"><span class="ic">${ic}</span><span class="tx"><b>${title}</b><span>${esc(body)}</span>${v == null ? "" : `<span class="bar"><i style="width:${pc(v)}"></i></span>`}</span></div>`;
+  const mon = s.monTotal ? T("rel_avail_mon", s.monOnline, s.monTotal, ago(s.monLast)) : T("rel_avail_nomon");
+  const hist = (s.histTotal || 0) >= 3 ? T("rel_avail_hist", s.histOk, s.histTotal) : T("rel_avail_nohist");
+  const word = g ? T("rel_w" + g.stars) : T("rel_unrated");
+  let h = `<div class="sec">${T("rel_title")}</div><div class="score">${starsHtml(g?.stars, true)}<span><b>${word}</b>${g ? `<span class="small muted">${T(g.partial ? "rel_partial" : "rel_full")}</span>` : ""}</span></div>`
+    + sig("📡", T("rel_avail"), `${mon} · ${hist}`, g?.avail)
+    + sig("🗄", T("rel_keep"), !s.kept ? T("rel_keep_none") : s.lost > 0 ? T("rel_keep_lost", s.lost, s.kept) : T("rel_keep_ok", s.kept), g?.keep)
+    + sig("👥", T("rel_follows"), s.counting ? T("rel_follows_wait") : T("rel_follows_v", s.follows || 0), g?.follows)
+    + sig("⚡", T("rel_speed"), s.ms != null ? T("rel_speed_v", s.ms) : T("rel_speed_none"), g?.speed);
+  if (g) h += `<details class="how"><summary>${T("rel_how")}</summary><table>${[["rel_avail", "avail"], ["rel_keep", "keep"], ["rel_follows", "follows"], ["rel_speed", "speed"]].map(([l, k]) =>
+    `<tr><td>${T(l)} (${W[k]}%)</td><td>${g[k] == null ? T("rel_no_signal") : pc(g[k])}</td></tr>`).join("")}<tr><td><b>${T("rel_total")}</b></td><td><b>${pc(g.score)} → ${g.stars} ★${g.capped ? " " + T("rel_cap") : ""}</b></td></tr></table></details>`;
+  return h;
+}
+/** Vuelve a pintar la ficha abierta (si la hay) cuando llegan monitores o seguidos. */
+function refreshSheet() { const el = $("#ri"); if (el && el.dataset.r) el.innerHTML = relaySheet(el.dataset.r, el.dataset.k || undefined); }
 async function loadProfiles() {
   const miss = st.accounts.map(a => a.pubkey).filter(pk => !st.profiles[pk]);
   if (!miss.length) return;
@@ -579,6 +692,7 @@ const OPS = {
     await toTrash(a.pubkey, label, events, tid);
     const tags = [...events.flatMap(x => [["e", x.id], ["a", address(x)]]), ...[...new Set(events.map(x => x.kind))].map(k => ["k", String(k)])];
     await publishSigned(signerOf(a), [relay], { kind: DELETION, created_at: at, tags, content: "" });
+    Stats.forget(a.pubkey, events.map(address), relay);
     toast(T("relay_deleted", relay.replace(/^wss:\/\//, "")));
     refresh();
   },

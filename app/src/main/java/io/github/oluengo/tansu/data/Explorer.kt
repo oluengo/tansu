@@ -25,6 +25,8 @@ class Explorer(
     private val vault: Vault,
     val trash: Trash,
     private val scope: CoroutineScope,
+    private val stats: RelayStats,
+    private val reputation: RelayReputation,
 ) {
     sealed interface Load {
         data object Loading : Load
@@ -44,6 +46,12 @@ class Explorer(
         val info: Map<String, io.github.oluengo.tansu.nostr.RelayInfo?> = emptyMap(),
         /** Último motivo de rechazo de cada relay. */
         val rejections: Map<String, String> = emptyMap(),
+        /** Monitores NIP-66 por relay. */
+        val monitors: Map<String, MonitorInfo> = emptyMap(),
+        /** Relay → seguidos de la cuenta que lo usan (null = aún no se sabe). */
+        val follows: Map<String, Int>? = null,
+        /** Cambia cuando cambia el historial local (para volver a pintar). */
+        val statsTick: Int = 0,
     ) {
         val snapshot: Snapshot? get() = (load as? Load.Ready)?.snapshot
     }
@@ -57,6 +65,40 @@ class Explorer(
     val progress: StateFlow<Progress?> = _progress.asStateFlow()
 
     private val cache = HashMap<String, Snapshot>()
+    private val monCache = java.util.concurrent.ConcurrentHashMap<String, MonitorInfo>()
+    private val monAsked = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val followsCache = java.util.concurrent.ConcurrentHashMap<String, Map<String, Int>>()
+
+    /** Señales de fiabilidad de [relay] para la cuenta activa (todas opcionales). */
+    fun signals(relay: String): RelaySignals {
+        val st = _state.value
+        val snap = st.snapshot
+        val mon = st.monitors[relay]
+        val hist = stats.history(relay)
+        val ret = st.pubkey?.let { stats.retention(it, relay) }
+        return RelaySignals(
+            monOnline = mon?.online, monTotal = mon?.total, monLast = mon?.last,
+            histOk = hist?.first, histTotal = hist?.second,
+            lost = ret?.first, kept = ret?.second,
+            follows = st.follows?.let { it[relay] ?: 0 },
+            ms = snap?.latency?.get(relay) ?: mon?.ms,
+        )
+    }
+
+    fun rating(relay: String): RelayRating? = RelayRating.of(signals(relay))
+
+    /** Pide a los monitores lo que saben de [relays] (como mucho cada 30 min por relay). */
+    fun askMonitors(relays: Collection<String>) {
+        val t = System.currentTimeMillis()
+        val todo = relays.filter { (monAsked[it] ?: 0) < t - 30 * 60_000 }
+        if (todo.isEmpty()) return
+        todo.forEach { monAsked[it] = t }
+        scope.launch {
+            val m = try { reputation.monitors(todo) } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyMap() }
+            monCache.putAll(m)
+            _state.update { it.copy(monitors = HashMap(monCache)) }
+        }
+    }
     // HashMap sincronizado: un relay sin ficha se guarda como null (ConcurrentHashMap no admite null)
     private val infoCache: MutableMap<String, io.github.oluengo.tansu.nostr.RelayInfo?> = java.util.Collections.synchronizedMap(HashMap())
 
@@ -65,6 +107,7 @@ class Explorer(
 
     /** Ficha de un relay que no es de la cuenta (p. ej. añadido a mano). */
     suspend fun infoOf(relay: String): io.github.oluengo.tansu.nostr.RelayInfo? {
+        askMonitors(listOf(relay))
         if (!infoCache.containsKey(relay)) infoCache[relay] = infoClient.fetch(relay)
         _state.update { it.copy(info = synchronized(infoCache) { HashMap(infoCache) }) }
         return infoCache[relay]
@@ -84,7 +127,10 @@ class Explorer(
         scope.launch {
             accounts.state.map { it.current?.pubkey }.distinctUntilChanged().collect { pk ->
                 val cached = pk?.let { cache[it] }
-                _state.value = State(pk, if (cached != null) Load.Ready(cached) else Load.Loading)
+                _state.value = State(
+                    pk, if (cached != null) Load.Ready(cached) else Load.Loading,
+                    info = synchronized(infoCache) { HashMap(infoCache) }, monitors = HashMap(monCache), follows = pk?.let { followsCache[it] },
+                )
                 if (pk != null) refresh()
             }
         }
@@ -97,7 +143,7 @@ class Explorer(
         loadJob = scope.launch {
             val r = try { vault.load(pk) } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
             if (_state.value.pubkey != pk) return@launch
-            if (r != null) cache[pk] = r
+            if (r != null) { cache[pk] = r; runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { stats.record(r) } } }
             _state.update {
                 it.copy(
                     load = when {
@@ -107,7 +153,15 @@ class Explorer(
                     },
                     refreshing = false,
                     rejections = HashMap(pool.rejections),
+                    statsTick = it.statsTick + 1,
                 )
+            }
+            if (r != null) {
+                askMonitors(r.relays)
+                if (!followsCache.containsKey(pk)) scope.launch {
+                    val f = try { reputation.follows(pk, r.relays) } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+                    if (f != null) { followsCache[pk] = f; if (_state.value.pubkey == pk) _state.update { it.copy(follows = f) } }
+                }
             }
             // Fichas NIP-11 de los relays que aún no tenemos (se guardan mientras la app está abierta)
             r?.relays?.filter { !infoCache.containsKey(it) }?.takeIf { it.isNotEmpty() }?.let { missing ->
@@ -210,6 +264,7 @@ class Explorer(
         if (!a.canSign) throw VaultException(VaultException.Reason.READ_ONLY)
         trash.add(a.pubkey, label, events)
         vault.deleteFrom(signer.crypto(a), listOf(relay), events)
+        stats.forget(a.pubkey, events.map { it.address }, relay)
         refresh()
     }
 

@@ -51,7 +51,8 @@ class AppContainer(app: Application) {
     val vault = Vault(relays)
     val profiles = io.github.oluengo.tansu.data.Profiles(vault, accounts, appScope)
     val relayInfo = io.github.oluengo.tansu.nostr.RelayInfoClient(http)
-    val explorer = Explorer(relayInfo, relays, accounts, signer, vault, Trash(File(app.filesDir, "trash.json")), appScope)
+    val explorer = Explorer(relayInfo, relays, accounts, signer, vault, Trash(File(app.filesDir, "trash.json")), appScope,
+        io.github.oluengo.tansu.data.RelayStats(File(app.filesDir, "relaystats.json")), io.github.oluengo.tansu.data.RelayReputation(relays))
 
     fun start() {
         explorer.start()

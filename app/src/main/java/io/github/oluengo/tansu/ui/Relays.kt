@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -69,6 +70,16 @@ import io.github.oluengo.tansu.AppContainer
 import io.github.oluengo.tansu.R
 import io.github.oluengo.tansu.data.AppSettings
 import io.github.oluengo.tansu.data.Snapshot
+import io.github.oluengo.tansu.data.RelayRating
+import io.github.oluengo.tansu.data.RelaySignals
+import io.github.oluengo.tansu.ui.common.ago
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import io.github.oluengo.tansu.data.RelayCopy
 import io.github.oluengo.tansu.data.Encoding
 import io.github.oluengo.tansu.data.detectEncoding
@@ -204,7 +215,9 @@ fun RelayInfoSheet(c: AppContainer, relay: String, current: List<Event>? = null,
                 TextButton(onClick = { c.explorer.reloadInfo(relay) }) { Text(stringResource(R.string.retry)) }
             }
             Spacer(Modifier.size(6.dp))
-            WarningLines(relayWarnings(info, st.rejections[relay], null))
+            val sig = remember(st, relay) { c.explorer.signals(relay) }
+            WarningLines(relayWarnings(info, st.rejections[relay], null) + if ((sig.lost ?: 0) > 0) listOf(stringResource(R.string.rel_w_lost)) else emptyList())
+            Reliability(sig, st.follows == null)
 
             if (info != null) {
                 SectionLabel(stringResource(R.string.ri_access))
@@ -286,7 +299,7 @@ fun RelayInfoSheet(c: AppContainer, relay: String, current: List<Event>? = null,
     if (busy) BusyDialog(c)
 }
 
-private enum class RelayFilter(val label: Int) { ALL(R.string.ri_f_all), PAID(R.string.ri_f_paid), AUTH(R.string.ri_f_auth), NODEL(R.string.ri_f_nodel), DOWN(R.string.ri_f_down) }
+private enum class RelayFilter(val label: Int) { ALL(R.string.ri_f_all), PAID(R.string.ri_f_paid), AUTH(R.string.ri_f_auth), NODEL(R.string.ri_f_nodel), DOWN(R.string.ri_f_down), LOW(R.string.rel_f_low) }
 
 /** Todos los relays de la cuenta con su ficha resumida. */
 @Composable
@@ -298,6 +311,9 @@ fun RelaysScreen(c: AppContainer, snap: Snapshot, refreshing: Boolean) {
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     var adding by remember { mutableStateOf(false) }
     val all = (snap.relays + tansu).distinct()
+    LaunchedEffect(all) { c.explorer.askMonitors(all) }
+    val sigs = remember(st, all) { all.associateWith { c.explorer.signals(it) } }
+    val ratings = remember(sigs) { sigs.mapValues { RelayRating.of(it.value) } }
     val shown = all.filter { r ->
         val i = st.info[r]
         when (filter) {
@@ -306,6 +322,7 @@ fun RelaysScreen(c: AppContainer, snap: Snapshot, refreshing: Boolean) {
             RelayFilter.AUTH -> i?.authRequired == true
             RelayFilter.NODEL -> i?.supportsDeletion == false
             RelayFilter.DOWN -> r in snap.relays && r !in snap.reached
+            RelayFilter.LOW -> (ratings[r]?.stars ?: 5) <= 2
         }
     }
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { c.explorer.refresh() }, modifier = Modifier.fillMaxSize()) {
@@ -326,12 +343,14 @@ fun RelaysScreen(c: AppContainer, snap: Snapshot, refreshing: Boolean) {
                             Text(info?.name ?: short(r), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (info?.name != null && info.name != short(r)) Text(short(r), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Text(stringResource(role(snap, r, tansu)), color = Ts.colors.muted, style = MaterialTheme.typography.labelSmall)
+                        Stars(ratings[r]?.stars)
                     }
+                    SummaryLine(sigs.getValue(r))
                     Spacer(Modifier.size(6.dp))
                     RelayChips(info, snap.latency[r], !inAccount || r in snap.reached)
+                    Text(stringResource(role(snap, r, tansu)), color = Ts.colors.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
                     snap.stats(r)?.let { (cur, old, miss) ->
-                        Text(stringResource(R.string.ri_stats, cur, old, miss), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
+                        Text(stringResource(R.string.ri_stats, cur, old, miss), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
                     }
                     st.rejections[r]?.let { WarningLines(listOf(stringResource(R.string.ri_w_reject, it.take(120)))) }
                 }
@@ -528,6 +547,104 @@ private fun CopyPicker(snap: Snapshot, relay: String, info: RelayInfo?, current:
             Button(enabled = chosen.isNotEmpty(), modifier = Modifier.fillMaxWidth().padding(top = 6.dp), onClick = { onCopy(chosen.map { it.events }) }) {
                 Text(if (chosen.isEmpty()) stringResource(R.string.pk_choose) else stringResource(R.string.pk_go, chosen.size, short(relay)))
             }
+        }
+    }
+}
+
+// ---------- Fiabilidad ----------
+
+private val StarOn = Color(0xFFE9A23B)
+
+/** 1 a 5 estrellas: en color las que tiene, en gris las que faltan. null = sin datos suficientes. */
+@Composable
+fun Stars(n: Int?, size: Dp = 15.dp) {
+    if (n == null) { Text(stringResource(R.string.rel_nodata), style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted); return }
+    val desc = stringResource(R.string.rel_stars, n)
+    Row(Modifier.semantics { contentDescription = desc }) {
+        (1..5).forEach { i -> Icon(Icons.Filled.Star, null, tint = if (i <= n) StarOn else Ts.colors.line, modifier = Modifier.size(size)) }
+    }
+}
+
+private fun ratio(a: Int?, b: Int?) = if (a != null && b != null && b > 0) a.toDouble() / b else null
+
+/** Línea corta del listado: en línea · seguidos · % respondió · pérdidas. */
+@Composable
+private fun SummaryLine(s: RelaySignals) {
+    val parts = ArrayList<Pair<String, Color?>>()
+    ratio(s.monOnline, s.monTotal)?.let { parts += (if (it < 0.5) stringResource(R.string.rel_down) else stringResource(R.string.rel_online)) to (if (it < 0.5) Ts.colors.danger else Good) }
+    s.follows?.let { parts += stringResource(R.string.rel_follows_short, it) to null }
+    if ((s.histTotal ?: 0) >= 3) parts += stringResource(R.string.rel_answered, "${s.histOk!! * 100 / s.histTotal!!}%") to null
+    if ((s.lost ?: 0) > 0) parts += stringResource(R.string.rel_lost_short, s.lost!!) to Ts.colors.lock
+    if (parts.isEmpty()) return
+    Text(
+        androidx.compose.ui.text.buildAnnotatedString {
+            parts.forEachIndexed { i, (t, col) ->
+                if (i > 0) append(" · ")
+                if (col != null) pushStyle(androidx.compose.ui.text.SpanStyle(color = col))
+                append(t)
+                if (col != null) pop()
+            }
+        },
+        style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp),
+    )
+}
+
+/** Sección «Fiabilidad» de la ficha: estrellas, las 4 señales con su barra y la tabla del cálculo. */
+@Composable
+private fun Reliability(s: RelaySignals, countingFollows: Boolean) {
+    val ctx = LocalContext.current
+    val g = RelayRating.of(s)
+    var how by remember { mutableStateOf(false) }
+    SectionLabel(stringResource(R.string.rel_title))
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Ts.colors.accentSoft.copy(alpha = 0.35f)).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Stars(g?.stars, 22.dp)
+        Column {
+            Text(g?.let { stringResource(listOf(R.string.rel_w1, R.string.rel_w2, R.string.rel_w3, R.string.rel_w4, R.string.rel_w5)[it.stars - 1]) } ?: stringResource(R.string.rel_unrated), fontWeight = FontWeight.SemiBold)
+            if (g != null) Text(stringResource(if (g.partial) R.string.rel_partial else R.string.rel_full), style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted)
+        }
+    }
+    val sig = g ?: RelayRating(0.0, 1, false, true, null, null, null, null)
+    val monTotal = s.monTotal ?: 0
+    val kept = s.kept ?: 0
+    val lost = s.lost ?: 0
+    val mon = if (monTotal > 0) stringResource(R.string.rel_avail_mon, s.monOnline ?: 0, monTotal, ago(ctx, s.monLast ?: 0)) else stringResource(R.string.rel_avail_nomon)
+    val hist = if ((s.histTotal ?: 0) >= 3) stringResource(R.string.rel_avail_hist, s.histOk ?: 0, s.histTotal ?: 0) else stringResource(R.string.rel_avail_nohist)
+    Signal("📡", stringResource(R.string.rel_avail), "$mon · $hist", g?.avail)
+    Signal("🗄", stringResource(R.string.rel_keep), when {
+        kept == 0 -> stringResource(R.string.rel_keep_none)
+        lost > 0 -> stringResource(R.string.rel_keep_lost, lost, kept)
+        else -> stringResource(R.string.rel_keep_ok, kept)
+    }, g?.keep)
+    Signal("👥", stringResource(R.string.rel_follows), if (countingFollows) stringResource(R.string.rel_follows_wait) else stringResource(R.string.rel_follows_v, s.follows ?: 0), g?.follows)
+    Signal("⚡", stringResource(R.string.rel_speed), s.ms?.let { stringResource(R.string.rel_speed_v, it.toInt()) } ?: stringResource(R.string.rel_speed_none), g?.speed)
+    if (g != null) {
+        TextButton(onClick = { how = !how }) { Text((if (how) "▾ " else "▸ ") + stringResource(R.string.rel_how)) }
+        if (how) {
+            val rows = listOf(
+                Triple(R.string.rel_avail, RelayRating.W_AVAIL, sig.avail), Triple(R.string.rel_keep, RelayRating.W_KEEP, sig.keep),
+                Triple(R.string.rel_follows, RelayRating.W_FOLLOWS, sig.follows), Triple(R.string.rel_speed, RelayRating.W_SPEED, sig.speed),
+            )
+            rows.forEach { (name, w, v) -> InfoRow("${stringResource(name)} ($w%)", v?.let { "${(it * 100).toInt()}%" } ?: stringResource(R.string.rel_no_signal)) }
+            HorizontalDivider()
+            InfoRow(stringResource(R.string.rel_total), "${(g.score * 100).toInt()}% → ${g.stars} ★" + if (g.capped) " " + stringResource(R.string.rel_cap) else "")
+        }
+    }
+}
+
+@Composable
+private fun Signal(icon: String, title: String, body: String, v: Double?) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(icon, modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(4.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+            Text(body, style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted)
+            if (v != null) LinearProgressIndicator(
+                progress = { v.toFloat() }, color = StarOn, trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(top = 5.dp).height(5.dp).clip(RoundedCornerShape(3.dp)),
+            )
         }
     }
 }
