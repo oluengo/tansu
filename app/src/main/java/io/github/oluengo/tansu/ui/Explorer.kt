@@ -445,7 +445,7 @@ private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String
             dismissButton = { TextButton(onClick = { askOther = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
-    sheet?.let { RelayInfoSheet(c, it) { sheet = null } }
+    sheet?.let { RelayInfoSheet(c, it, current = events) { sheet = null } }
     if (busy) BusyDialog(c)
 }
 
@@ -466,7 +466,7 @@ private fun Folder(c: AppContainer, snap: Snapshot, app: String, refreshing: Boo
 
 private fun listKey(e: Event): String = Lists.KINDS[e.kind] ?: "other"
 
-private fun listTitle(e: Event, ctx: android.content.Context): String {
+internal fun listTitle(e: Event, ctx: android.content.Context): String {
     val res = ctx.resources.getIdentifier("list_" + listKey(e), "string", ctx.packageName)
     val kind = if (res != 0) ctx.getString(res) else "kind ${e.kind}"
     return Lists.title(e)?.let { "$it · $kind" } ?: kind

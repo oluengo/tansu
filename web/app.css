@@ -141,3 +141,24 @@ textarea.in{min-height:60vh;resize:vertical;font:12.5px/1.5 ui-monospace,Menlo,C
 .rcard .chips{margin-bottom:6px}
 .chips.filters{padding:0 6px 8px;flex-wrap:nowrap;overflow-x:auto}.chips.filters button{font-family:inherit;white-space:nowrap}
 .badge.acc{background:var(--accent-soft);color:var(--accent)}
+/* Copiar a un relay: botón con subtítulo y selector */
+.btn.block{flex-direction:column;gap:0}.btn .sub{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:2px}.btn.p .sub{color:inherit;opacity:.8}
+.sheet.tall{height:92vh;max-height:92vh;display:flex;flex-direction:column;padding:0;overflow:hidden}
+.pk{display:flex;flex-direction:column;height:100%;min-height:0}
+.pk-head{padding:14px 18px 4px}.pk-head .seg{margin:10px 0}.pk-head .in{margin-top:4px}
+.pk-links{display:flex;justify-content:space-between;align-items:center;min-height:34px}
+.pk-body{flex:1;overflow:auto;padding:0 18px 12px;min-height:0}
+.pk-bar{border-top:1px solid var(--line);padding:10px 18px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px}
+.fold{border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden}
+.fh{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--soft)}
+.fh .fn{flex:1;min-width:0;text-align:left;padding:2px 0}.fh .fn b{display:block;font-size:14px}.fh .fn span{font-size:12px;color:var(--muted)}
+.acc-t{color:var(--accent)}
+.cb{width:20px;height:20px;border-radius:6px;border:2px solid var(--muted);display:inline-grid;place-items:center;flex:none;font-size:12px;line-height:1;color:var(--on-accent);padding:0}
+.cb.on,.cb.mid{background:var(--accent);border-color:var(--accent)}.cb:disabled{opacity:.35}
+.chev{color:var(--muted);font-size:18px;padding:2px 6px;transition:transform .15s}.chev.open{transform:rotate(90deg)}
+.it{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-top:1px solid var(--line);text-align:left}
+.it .n{flex:1;min-width:0}.it .n b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.it .n>span{font-size:12px;color:var(--muted)}
+.it:disabled{cursor:default}.it:disabled .n b{color:var(--muted)}.it .why{display:block;color:var(--lock)}
+.it.here{background:var(--accent-soft)}
+.more{display:block;width:100%;border-top:1px solid var(--line);padding:9px;color:var(--accent);font-weight:600;font-size:13px}
+.fh .fn span b{display:inline;font-size:12px}

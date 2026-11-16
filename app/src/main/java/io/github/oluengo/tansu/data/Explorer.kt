@@ -70,10 +70,8 @@ class Explorer(
         return infoCache[relay]
     }
 
-    /** Copia a [relay] todo lo de la cuenta que no tiene o tiene anticuado. Devuelve cuántos datos. */
-    suspend fun syncRelay(relay: String): Result<Int> = attempt {
-        val snap = _state.value.snapshot ?: throw VaultException(VaultException.Reason.OFFLINE)
-        val todo = snap.missingAt(relay)
+    /** Copia a [relay] los datos elegidos (cada uno, sus eventos tal cual). Devuelve cuántos datos llegaron. */
+    suspend fun copyItemsTo(relay: String, todo: List<List<Event>>): Result<Int> = attempt {
         var n = 0
         todo.forEachIndexed { i, ev -> _progress.value = Progress(i + 1, todo.size); if (runCatching { vault.copyTo(listOf(relay), ev) }.isSuccess) n++ }
         if (todo.isNotEmpty() && n == 0) throw VaultException(VaultException.Reason.OFFLINE)

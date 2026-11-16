@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -24,6 +26,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.TriStateCheckbox
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +69,9 @@ import io.github.oluengo.tansu.AppContainer
 import io.github.oluengo.tansu.R
 import io.github.oluengo.tansu.data.AppSettings
 import io.github.oluengo.tansu.data.Snapshot
+import io.github.oluengo.tansu.data.RelayCopy
+import io.github.oluengo.tansu.data.Encoding
+import io.github.oluengo.tansu.data.detectEncoding
 import io.github.oluengo.tansu.nostr.Event
 import io.github.oluengo.tansu.nostr.Nip19
 import io.github.oluengo.tansu.nostr.RelayInfo
@@ -142,7 +156,7 @@ private fun feeText(ctx: Context, f: io.github.oluengo.tansu.nostr.RelayFee): St
 /** Ficha de un relay (NIP-11) más lo que sabemos de él en esta cuenta. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun RelayInfoSheet(c: AppContainer, relay: String, onClose: () -> Unit) {
+fun RelayInfoSheet(c: AppContainer, relay: String, current: List<Event>? = null, onClose: () -> Unit) {
     val st by c.explorer.state.collectAsStateWithLifecycle()
     val s by c.settings.flow.collectAsStateWithLifecycle(initialValue = AppSettings())
     val ctx = LocalContext.current
@@ -156,10 +170,25 @@ fun RelayInfoSheet(c: AppContainer, relay: String, onClose: () -> Unit) {
     val reached = snap?.reached?.contains(relay) ?: false
     val inAccount = snap?.relays?.contains(relay) == true
     var busy by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
     val unknown = stringResource(R.string.ri_unknown)
     fun yesNo(b: Boolean?) = when (b) { true -> ctx.getString(R.string.ri_required); false -> ctx.getString(R.string.ri_not_required); null -> unknown }
 
+    fun copy(items: List<List<Event>>) {
+        busy = true
+        scope.launch {
+            c.explorer.copyItemsTo(relay, items)
+                .onSuccess { Toast.makeText(ctx, ctx.resources.getQuantityString(R.plurals.ri_synced_here, it, it), Toast.LENGTH_SHORT).show(); picking = false }
+                .onFailure { Toast.makeText(ctx, errorText(ctx, it), Toast.LENGTH_LONG).show() }
+            busy = false
+        }
+    }
+
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        if (picking && snap != null) {
+            CopyPicker(snap, relay, info, current, onBack = { picking = false }, onCopy = ::copy)
+            return@ModalBottomSheet
+        }
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 20.dp)) {
             Text(info?.name ?: short(relay), style = MaterialTheme.typography.titleLarge)
             Text(relay, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted)
@@ -221,16 +250,24 @@ fun RelayInfoSheet(c: AppContainer, relay: String, onClose: () -> Unit) {
                 InfoRow(stringResource(R.string.ri_role), stringResource(role(snap, relay, tansu)))
                 snap.stats(relay)?.let { (cur, old, miss) -> InfoRow(stringResource(R.string.ri_data), stringResource(R.string.ri_stats, cur, old, miss)) }
                 snap.latency[relay]?.let { InfoRow(stringResource(R.string.ri_latency), stringResource(R.string.ri_ms, it.toInt())) }
+            }
+            if (snap != null) {
+                // Lo que estás viendo, primero; elegir otros datos, aparte. Nunca se copia todo de golpe.
+                val here = current?.let { ev -> snap.copies(ev).firstOrNull { it.relay == relay }?.state }
+                val showThis = current != null && (here == null || here == RelayCopy.State.MISSING || here == RelayCopy.State.OLDER || here == RelayCopy.State.PARTIAL)
                 val todo = snap.missingAt(relay).size
-                if (todo > 0) OutlinedButton(enabled = !busy, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), onClick = {
-                    busy = true
-                    scope.launch {
-                        c.explorer.syncRelay(relay)
-                            .onSuccess { Toast.makeText(ctx, ctx.resources.getQuantityString(R.plurals.ri_synced_here, it, it), Toast.LENGTH_SHORT).show() }
-                            .onFailure { Toast.makeText(ctx, errorText(ctx, it), Toast.LENGTH_LONG).show() }
-                        busy = false
+                if (showThis) Button(enabled = !busy, modifier = Modifier.fillMaxWidth().padding(top = 10.dp), onClick = { copy(listOf(current!!)) }) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.ri_copy_this))
+                        Text(itemLabel(ctx, snap, current!!) + " · " + size(ctx, current.sumOf { it.content.length }), style = MaterialTheme.typography.bodySmall)
                     }
-                }) { Text(stringResource(R.string.ri_sync_here, todo)) }
+                }
+                OutlinedButton(enabled = !busy, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), onClick = { picking = true }) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.ri_pick))
+                        if (todo > 0 && relay in snap.reached) Text(ctx.resources.getQuantityString(R.plurals.ri_pick_sub, todo, todo), style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted)
+                    }
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
@@ -327,4 +364,170 @@ private fun AddRelayDialog(onDone: (String) -> Unit, onCancel: () -> Unit) {
         confirmButton = { TextButton(onClick = { RelayPool.normalize(input)?.let(onDone) ?: run { invalid = true } }) { Text(stringResource(R.string.ri_open)) } },
         dismissButton = { TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) } },
     )
+}
+
+// ---------- Elegir qué copiar a un relay ----------
+
+/** Un dato de la cuenta (entrada NIP-78 con sus partes, o lista NIP-51) visto desde un relay. */
+private data class PickItem(
+    val key: String, val label: String, val group: String, val events: List<Event>,
+    val state: RelayCopy.State, val parts: Int, val bytes: Int, val blocked: String?,
+) { val needs get() = state == RelayCopy.State.MISSING || state == RelayCopy.State.OLDER || state == RelayCopy.State.PARTIAL || state == RelayCopy.State.UNKNOWN }
+
+private fun itemLabel(ctx: Context, snap: Snapshot, ev: List<Event>): String {
+    val main = ev.last()
+    return snap.entries.firstOrNull { it.main.id == main.id }?.d ?: listTitle(main, ctx)
+}
+
+private fun pickItems(ctx: Context, snap: Snapshot, relay: String, info: RelayInfo?): List<PickItem> {
+    val limit = info?.maxContentLength ?: info?.maxMessageLength
+    fun state(ev: List<Event>) = snap.copies(ev).firstOrNull { it.relay == relay }?.state ?: RelayCopy.State.UNKNOWN
+    fun blocked(ev: List<Event>): String? = when {
+        ev.any { detectEncoding(it.content) == Encoding.PLAIN } -> ctx.getString(R.string.pk_w_plain)
+        limit != null && ev.any { it.content.length > limit } -> ctx.getString(R.string.pk_w_big, size(ctx, limit))
+        else -> null
+    }
+    val entries = snap.entries.map { e ->
+        PickItem(e.main.address, e.d, if (e.app.isEmpty()) ctx.getString(R.string.folder_other) else io.github.oluengo.tansu.data.AppData.KNOWN[e.app] ?: e.app, e.events, state(e.events), e.parts.size, e.bytes, blocked(e.events))
+    }
+    val lists = snap.lists.map { l ->
+        PickItem(l.address, listTitle(l, ctx), ctx.getString(R.string.drawer_lists), listOf(l), state(listOf(l)), 0, l.content.length, blocked(listOf(l)))
+    }
+    return entries + lists
+}
+
+@Composable
+private fun StateBadge(s: RelayCopy.State) {
+    when (s) {
+        RelayCopy.State.CURRENT -> Badge("✓ " + stringResource(R.string.relay_current), Good, GoodSoft)
+        RelayCopy.State.OLDER -> Badge(stringResource(R.string.relay_older, "").substringBefore(" ("), Ts.colors.lock, Ts.colors.lockSoft)
+        RelayCopy.State.PARTIAL -> Badge(stringResource(R.string.relay_partial), Ts.colors.lock, Ts.colors.lockSoft)
+        RelayCopy.State.MISSING -> Badge("✕ " + stringResource(R.string.relay_missing), Ts.colors.danger, Ts.colors.danger.copy(alpha = 0.12f))
+        RelayCopy.State.UNKNOWN -> Unit
+    }
+}
+
+/**
+ * Selector de datos para copiar a un relay. Pensado para cuentas con mucho contenido:
+ * solo lo que no está al día (o todo), por carpetas plegadas, buscador y resumen fijo abajo.
+ * Lo sin cifrar y lo que no cabe en el relay no se puede marcar.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CopyPicker(snap: Snapshot, relay: String, info: RelayInfo?, current: List<Event>?, onBack: () -> Unit, onCopy: (List<List<Event>>) -> Unit) {
+    val ctx = LocalContext.current
+    val all = remember(snap, info) { pickItems(ctx, snap, relay, info) }
+    val known = relay in snap.reached
+    val currentKey = current?.last()?.address
+    val currentGroup = all.firstOrNull { it.key == currentKey }?.group
+    var onlyMissing by rememberSaveable { mutableStateOf(known) }
+    var q by rememberSaveable { mutableStateOf("") }
+    var sel by remember { mutableStateOf(setOfNotNull(currentKey?.takeIf { k -> all.any { it.key == k && it.blocked == null } })) }
+    var open by remember { mutableStateOf(setOfNotNull(currentGroup)) }
+    var more by remember { mutableStateOf(emptySet<String>()) }
+    val needle = q.trim().lowercase()
+    val shown = all.filter { (!onlyMissing || it.needs) && (needle.isEmpty() || needle in it.label.lowercase()) }
+    val groups = shown.groupBy { it.group }
+    val missingOk = all.filter { it.needs && it.blocked == null }
+    val chosen = all.filter { it.key in sel }
+
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).navigationBarsPadding()) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) { Text("←", style = MaterialTheme.typography.titleLarge) }
+                    Text(stringResource(R.string.pk_title, short(relay)), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (known) SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    SegmentedButton(selected = onlyMissing, onClick = { onlyMissing = true }, shape = SegmentedButtonDefaults.itemShape(0, 2)) {
+                        Text(stringResource(R.string.pk_mode_miss, all.count { it.needs }), maxLines = 1)
+                    }
+                    SegmentedButton(selected = !onlyMissing, onClick = { onlyMissing = false }, shape = SegmentedButtonDefaults.itemShape(1, 2)) {
+                        Text(stringResource(R.string.pk_mode_all, all.size), maxLines = 1)
+                    }
+                }
+                OutlinedTextField(
+                    value = q, onValueChange = { q = it }, singleLine = true, placeholder = { Text(stringResource(R.string.pk_search)) },
+                    shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth(),
+                )
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (known && missingOk.isNotEmpty()) TextButton(onClick = { sel = sel + missingOk.map { it.key } }) { Text(stringResource(R.string.pk_select_missing, missingOk.size)) }
+                    Spacer(Modifier.weight(1f))
+                    if (sel.isNotEmpty()) TextButton(onClick = { sel = emptySet() }) { Text(stringResource(R.string.pk_clear), color = Ts.colors.muted) }
+                }
+            }
+            if (groups.isEmpty()) item { EmptyNote(stringResource(R.string.pk_nothing)) }
+            groups.forEach { (g, items) ->
+                val can = items.filter { it.blocked == null }
+                val on = can.count { it.key in sel }
+                val isOpen = g in open || needle.isNotEmpty()
+                val total = all.filter { it.group == g }
+                item(key = "g:$g") {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(12.dp)).background(Ts.colors.folderSoft.copy(alpha = 0.5f))
+                            .clickable { open = if (g in open) open - g else open + g }.padding(end = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TriStateCheckbox(
+                            state = when { on == 0 -> ToggleableState.Off; on == can.size -> ToggleableState.On; else -> ToggleableState.Indeterminate },
+                            enabled = can.isNotEmpty(),
+                            onClick = { sel = if (on == can.size) sel - can.map { it.key }.toSet() else sel + can.map { it.key }; open = open + g },
+                        )
+                        Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                            Text(g, fontWeight = FontWeight.SemiBold)
+                            val sub = if (onlyMissing) ctx.resources.getQuantityString(R.plurals.pk_group_miss, items.size, items.size)
+                            else stringResource(R.string.pk_group_all, total.size, total.count { it.needs && known })
+                            Text(sub + if (on > 0) " · " + stringResource(R.string.pk_chosen, on) else "", style = MaterialTheme.typography.bodySmall, color = if (on > 0) MaterialTheme.colorScheme.primary else Ts.colors.muted)
+                        }
+                        Text(if (isOpen) "▾" else "▸", color = Ts.colors.muted)
+                    }
+                }
+                if (isOpen) {
+                    val limit = if (g in more) items.size else 6
+                    items(items.take(limit), key = { it.key }) {
+                        val enabled = it.blocked == null
+                        val here = it.key == currentKey
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                                .background(if (here) Ts.colors.accentSoft.copy(alpha = 0.5f) else Color.Transparent)
+                                .clickable(enabled = enabled) { sel = if (it.key in sel) sel - it.key else sel + it.key }.padding(end = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = it.key in sel, onCheckedChange = null, enabled = enabled, modifier = Modifier.padding(12.dp))
+                            Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(it.label, fontWeight = FontWeight.SemiBold, color = if (enabled) Color.Unspecified else Ts.colors.muted,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                    if (here) Badge(stringResource(R.string.pk_here), MaterialTheme.colorScheme.primary, Ts.colors.accentSoft)
+                                }
+                                val meta = listOfNotNull(
+                                    if (it.parts > 0) ctx.resources.getQuantityString(R.plurals.parts, it.parts, it.parts) else null,
+                                    size(ctx, it.bytes),
+                                ).joinToString(" · ")
+                                Text(meta, style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted)
+                                it.blocked?.let { b -> Text("⚠ $b", style = MaterialTheme.typography.bodySmall, color = Ts.colors.lock) }
+                            }
+                            StateBadge(it.state)
+                        }
+                    }
+                    if (items.size > limit) item(key = "m:$g") {
+                        TextButton(onClick = { more = more + g }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pk_more, items.size - limit)) }
+                    }
+                }
+            }
+        }
+        HorizontalDivider()
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+            val ev = chosen.sumOf { it.events.size }
+            Text(
+                if (chosen.isEmpty()) stringResource(R.string.pk_choose)
+                else ctx.resources.getQuantityString(R.plurals.pk_items, chosen.size, chosen.size) + " · " +
+                    ctx.resources.getQuantityString(R.plurals.pk_events, ev, ev) + " · " + size(ctx, chosen.sumOf { it.bytes }),
+                style = MaterialTheme.typography.bodySmall, color = Ts.colors.muted,
+            )
+            Button(enabled = chosen.isNotEmpty(), modifier = Modifier.fillMaxWidth().padding(top = 6.dp), onClick = { onCopy(chosen.map { it.events }) }) {
+                Text(if (chosen.isEmpty()) stringResource(R.string.pk_choose) else stringResource(R.string.pk_go, chosen.size, short(relay)))
+            }
+        }
+    }
 }

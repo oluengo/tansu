@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.3.5" + (BETA ? " beta" : "");
+const VERSION = "0.3.6" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -270,7 +270,7 @@ function feeText(f) {
   return `${k}: ${amt}${f.period ? ` / ${Math.max(1, Math.round(f.period / 86400))} d` : ""}`;
 }
 /** Ficha del relay (NIP-11) + lo que sabemos de él en esta cuenta. */
-function relaySheet(r) {
+function relaySheet(r, curKey) {
   const sn = snap(), known = r in st.info, i = st.info[r], inAcc = sn?.relays.includes(r), unk = T("ri_unknown");
   const row = (k, v) => `<dt>${esc(k)}</dt><dd>${v}</dd>`;
   const yn = b => b === true ? T("ri_required") : b === false ? T("ri_not_required") : unk;
@@ -301,10 +301,17 @@ function relaySheet(r) {
       + (i.software ? row(T("ri_software"), esc([i.software.split("/").pop(), i.version].filter(Boolean).join(" "))) : "") + `</dl>`;
   }
   if (inAcc) {
-    const s = statsOf(sn, r), todo = missingAt(sn, r).length;
+    const s = statsOf(sn, r);
     h += `<div class="sec">${T("ri_account")}</div><dl class="info">` + row(T("ri_role"), roleOf(sn, r))
       + (s ? row(T("ri_data"), T("ri_stats", ...s)) : "") + (sn.latency?.[r] != null ? row(T("ri_latency"), T("ri_ms", sn.latency[r])) : "") + `</dl>`;
-    if (todo) h += `<div class="stack"><button class="btn block" data-a="syncrelay" data-x="${esc(r)}">${T("ri_sync_here", todo)}</button></div>`;
+  }
+  if (sn) {
+    // Lo que estás viendo, primero; elegir otros datos, aparte. Nunca se copia todo de golpe.
+    const ev = curKey ? (() => { try { return eventsOf(curKey); } catch { return null; } })() : null;
+    const here = ev ? copiesOf({ ...sn, relays: [r] }, ev)[0].state : null, todo = sn.reached.has(r) ? missingAt(sn, r).length : 0;
+    h += `<div class="stack">`;
+    if (ev && here !== "current") h += `<button class="btn block p" data-a="copythis" data-x='${J({ key: curKey, relay: r })}'>${T("ri_copy_this")}<span class="sub">${esc(labelOf(ev))} · ${size(ev.reduce((a, e) => a + e.content.length, 0))}</span></button>`;
+    h += `<button class="btn block" data-a="pickopen" data-x='${J({ relay: r, cur: curKey || null })}'>${T("ri_pick")}${todo ? `<span class="sub">${TP("ri_pick_sub", todo)}</span>` : ""}</button></div>`;
   }
   const mine = appRelays();
   h += `<div class="stack"><button class="btn block" data-a="copytext" data-x="${esc(r)}">${T("ri_copy_url")}</button>`
@@ -312,7 +319,63 @@ function relaySheet(r) {
       : `<button class="btn block" data-a="addrelayx" data-x="${esc(r)}">${T("ri_add_tansu")}</button>`) + `</div>`;
   return h + `<p class="small muted">${T("ri_note")}</p>`;
 }
-function openRelay(r) { sheet(`<div id="ri">${relaySheet(r)}</div>`); if (!(r in st.info)) infoOf(r).then(() => { const el = $("#ri"); if (el) el.innerHTML = relaySheet(r); }); }
+function openRelay(r, k) { sheet(`<div id="ri">${relaySheet(r, k)}</div>`); if (!(r in st.info)) infoOf(r).then(() => { const el = $("#ri"); if (el) el.innerHTML = relaySheet(r, k); }); }
+function labelOf(ev) { const m = ev[ev.length - 1], e = snap()?.entries.find(x => x.main.id === m.id); return e ? e.d : listTitle(m); }
+
+// ---------- Elegir qué copiar a un relay ----------
+// Pensado para mucho contenido: solo lo que no está al día (o todo), por carpetas plegadas, buscador y resumen fijo.
+function pickItems(sn, r) {
+  const i = st.info[r], lim = i?.maxContent ?? i?.maxMessage;
+  const block = ev => ev.some(e => encoding(e.content) === "plain") ? T("pk_w_plain") : lim != null && ev.some(e => e.content.length > lim) ? T("pk_w_big", size(lim)) : null;
+  const mk = (key, label, group, ev, parts) => { const state = copiesOf({ ...sn, relays: [r] }, ev)[0].state;
+    return { key, label, group, ev, parts, bytes: ev.reduce((a, e) => a + e.content.length, 0), state, needs: state !== "current", blocked: block(ev) }; };
+  return [...sn.entries.map(e => mk("e:" + e.d, e.d, appName(e.app), e.events, e.parts.length)),
+    ...sn.lists.map(l => mk("l:" + address(l), listTitle(l), T("drawer_lists"), [l], 0))];
+}
+const stLabel = s => s === "current" ? `<span class="badge ok-b">✓ ${T("relay_current")}</span>` : s === "missing" ? `<span class="badge plain">✕ ${T("relay_missing")}</span>`
+  : s === "older" ? `<span class="badge lock">${esc(T("relay_older", "").split(" (")[0])}</span>` : s === "partial" ? `<span class="badge lock">${T("relay_partial")}</span>` : "";
+function pickOpen(relay, cur) {
+  const sn = snap(), known = sn.reached.has(relay), all = pickItems(sn, relay), c = all.find(x => x.key === cur);
+  st.pk = { relay, cur, miss: known, q: "", sel: new Set(c && !c.blocked ? [cur] : []), open: new Set(c ? [c.group] : []), more: new Set() };
+  pickRender();
+}
+function pickRender() {
+  const p = st.pk, sn = snap(); if (!p || !sn) return;
+  const known = sn.reached.has(p.relay), all = pickItems(sn, p.relay), okMiss = all.filter(x => x.needs && !x.blocked);
+  sheet(`<div class="pk"><div class="pk-head"><div style="display:flex;align-items:center;gap:6px"><button class="icon-btn" data-a="pickback" aria-label="${T("back")}">←</button><h3 style="margin:0">${esc(T("pk_title", host(p.relay)))}</h3></div>
+    ${known ? `<div class="seg"><button class="${p.miss ? "on" : ""}" data-a="pkmode" data-x="1">${T("pk_mode_miss", all.filter(x => x.needs).length)}</button><button class="${p.miss ? "" : "on"}" data-a="pkmode" data-x="">${T("pk_mode_all", all.length)}</button></div>` : ""}
+    <input id="pk-q" class="in" placeholder="${T("pk_search")}" value="${esc(p.q)}" autocapitalize="off">
+    <div class="pk-links">${known && okMiss.length ? `<button class="btn t small" data-a="pkallmiss">${T("pk_select_missing", okMiss.length)}</button>` : "<span></span>"}<span id="pk-clear"></span></div></div>
+    <div class="pk-body" id="pk-body"></div><div class="pk-bar" id="pk-bar"></div></div>`);
+  $(".sheet").classList.add("tall");
+  pickBody();
+}
+function pickBody() {
+  const p = st.pk, sn = snap(), all = pickItems(sn, p.relay), needle = p.q.trim().toLowerCase();
+  const shown = all.filter(x => (!p.miss || x.needs) && (!needle || x.label.toLowerCase().includes(needle)));
+  const groups = [...new Set(shown.map(x => x.group))];
+  let h = groups.length ? "" : `<p class="muted">${T("pk_nothing")}</p>`;
+  for (const g of groups) {
+    const items = shown.filter(x => x.group === g), can = items.filter(x => !x.blocked), on = can.filter(x => p.sel.has(x.key)).length;
+    const cls = on === 0 ? "" : on === can.length ? "on" : "mid", open = p.open.has(g) || !!needle, tot = all.filter(x => x.group === g);
+    const sub = (p.miss ? TP("pk_group_miss", items.length) : T("pk_group_all", tot.length, tot.filter(x => x.needs && sn.reached.has(p.relay)).length)) + (on ? ` · <b class="acc-t">${T("pk_chosen", on)}</b>` : "");
+    h += `<div class="fold"><div class="fh"><button class="cb ${cls}" data-a="pkgroup" data-x="${esc(g)}" ${can.length ? "" : "disabled"} aria-label="${esc(g)}">${cls === "on" ? "✓" : cls === "mid" ? "–" : ""}</button>
+      <button class="fn" data-a="pkfold" data-x="${esc(g)}"><b>${esc(g)}</b><span>${sub}</span></button><button class="chev ${open ? "open" : ""}" data-a="pkfold" data-x="${esc(g)}" aria-label="${esc(g)}">›</button></div>`;
+    if (open) {
+      const lim = p.more.has(g) ? items.length : 6;
+      h += items.slice(0, lim).map(x => `<button class="it ${x.key === p.cur ? "here" : ""}" ${x.blocked ? "disabled" : `data-a="pksel" data-x="${esc(x.key)}"`}>
+        <span class="cb ${p.sel.has(x.key) ? "on" : ""}">${p.sel.has(x.key) ? "✓" : ""}</span>
+        <span class="n"><b>${esc(x.label)}${x.key === p.cur ? ` <span class="badge acc">${T("pk_here")}</span>` : ""}</b><span>${esc([x.parts ? TP("parts", x.parts) : null, size(x.bytes)].filter(Boolean).join(" · "))}${x.blocked ? `<span class="why">⚠ ${esc(x.blocked)}</span>` : ""}</span></span>${stLabel(x.state)}</button>`).join("");
+      if (items.length > lim) h += `<button class="more" data-a="pkmore" data-x="${esc(g)}">${T("pk_more", items.length - lim)}</button>`;
+    }
+    h += `</div>`;
+  }
+  $("#pk-body").innerHTML = h;
+  const ch = all.filter(x => p.sel.has(x.key)), ev = ch.reduce((a, x) => a + x.ev.length, 0);
+  $("#pk-clear").innerHTML = p.sel.size ? `<button class="btn t small muted" data-a="pkclear">${T("pk_clear")}</button>` : "";
+  $("#pk-bar").innerHTML = `<div class="small muted">${ch.length ? `${TP("pk_items", ch.length)} · ${TP("pk_events", ev)} · ${size(ch.reduce((a, x) => a + x.bytes, 0))}` : T("pk_choose")}</div>
+    <button class="btn p block" data-a="pkgo" ${ch.length ? "" : "disabled"}>${ch.length ? T("pk_go", ch.length, host(p.relay)) : T("pk_choose")}</button>`;
+}
 const FILTERS = [["all", "ri_f_all"], ["paid", "ri_f_paid"], ["auth", "ri_f_auth"], ["nodel", "ri_f_nodel"], ["down", "ri_f_down"]];
 function relays(sn, r) {
   const f = r.f || "all", all = [...new Set([...sn.relays, ...appRelays()])];
@@ -334,7 +397,7 @@ function relaysGroup(sn, events, key) {
   const acts = x => x.state === "unknown" ? "" : (needsSync(x) ? `<button class="btn t small" data-a="relaycopy" data-x='${J({ key, relay: x.relay })}'>${T("relay_copy_here")}</button>` : "")
     + (signer && ["current", "older", "partial"].includes(x.state) ? `<button class="btn t small danger" data-a="relaydelask" data-x='${J({ key, relay: x.relay })}'>${T("delete")}</button>` : "");
   const warn = x => warnings(x.relay, events).map(w => `<div class="warn small">⚠ ${esc(w)}</div>`).join("");
-  return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><button class="v mono rlink" data-a="relayinfo" data-x="${esc(x.relay)}">${esc(host(x.relay))}</button>${lab(x)}${acts(x)}</div>${warn(x)}`).join("")}
+  return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><button class="v mono rlink" data-a="relayinfo" data-x="${esc(x.relay)}" data-k="${esc(key)}">${esc(host(x.relay))}</button>${lab(x)}${acts(x)}</div>${warn(x)}`).join("")}
     <div class="stack">${miss ? `<button class="btn block" data-a="sync" data-x="${esc(key)}">${T("relays_sync", miss)}</button>` : ""}<button class="btn block" data-a="relayother" data-x="${esc(key)}">${T("relay_copy_other")}</button></div>
     <p class="small muted">${T("relays_sync_note")} ${T("relays_where_note")}</p></div>`;
 }
@@ -497,8 +560,8 @@ const OPS = {
     sn.entries = sn.entries.filter(x => x.d !== d); delete st.opened[okey(a.pubkey, d)];
     toast(T("deleted")); st.route.pop();
   },
-  async syncRelay({ relay }) {
-    const todo = missingAt(snap(), relay); let n = 0;
+  async copyItems({ relay, keys }) {
+    const todo = keys.map(k => { try { return eventsOf(k); } catch { return null; } }).filter(Boolean); let n = 0;
     for (const ev of todo) { if (ev.some(e => encoding(e.content) === "plain")) continue; let ok = true; for (const e of ev) if (await N.publish([relay], e) === 0) { ok = false; break; } if (ok) n++; }
     if (todo.length && !n) throw new TErr("offline");
     toast(TP("ri_synced_here", n)); await refresh();
@@ -986,9 +1049,23 @@ const ACT = {
   open(el) { run("open", { d: el.dataset.x }); },
   sync(el) { run("sync", { key: el.dataset.x }); },
   relaycopy(el) { run("copyRelay", JSON.parse(el.dataset.x)); },
-  relayinfo(el) { openRelay(el.dataset.x); },
+  relayinfo(el) { openRelay(el.dataset.x, el.dataset.k); },
   relayretry(el) { delete st.info[el.dataset.x]; closeLayer(); refresh(); },
-  syncrelay(el) { const r = el.dataset.x; closeLayer(); run("syncRelay", { relay: r }); },
+  copythis(el) { const o = JSON.parse(el.dataset.x); closeLayer(); run("copyItems", { relay: o.relay, keys: [o.key] }); },
+  pickopen(el) { const o = JSON.parse(el.dataset.x); pickOpen(o.relay, o.cur); },
+  pickback() { const p = st.pk; st.pk = null; openRelay(p.relay, p.cur); },
+  pkmode(el) { st.pk.miss = !!el.dataset.x; pickRender(); },
+  pkfold(el) { const o = st.pk.open, g = el.dataset.x; o.has(g) ? o.delete(g) : o.add(g); pickBody(); },
+  pkmore(el) { st.pk.more.add(el.dataset.x); pickBody(); },
+  pksel(el) { const s = st.pk.sel, k = el.dataset.x; s.has(k) ? s.delete(k) : s.add(k); pickBody(); },
+  pkgroup(el) {
+    const p = st.pk, g = el.dataset.x, needle = p.q.trim().toLowerCase();
+    const can = pickItems(snap(), p.relay).filter(x => x.group === g && !x.blocked && (!p.miss || x.needs) && (!needle || x.label.toLowerCase().includes(needle)));
+    const all = can.every(x => p.sel.has(x.key)); can.forEach(x => all ? p.sel.delete(x.key) : p.sel.add(x.key)); p.open.add(g); pickBody();
+  },
+  pkallmiss() { const p = st.pk; pickItems(snap(), p.relay).filter(x => x.needs && !x.blocked).forEach(x => p.sel.add(x.key)); pickBody(); },
+  pkclear() { st.pk.sel.clear(); pickBody(); },
+  pkgo() { const p = st.pk; st.pk = null; closeLayer(); run("copyItems", { relay: p.relay, keys: [...p.sel] }); },
   rfilter(el) { cur().f = el.dataset.x; render(); },
   addrelayx(el) { const l = appRelays(); if (!l.includes(el.dataset.x)) st.settings.relays = [...l, el.dataset.x]; saveSettings(); closeLayer(); refresh(); },
   addrelaydlg() {
@@ -1088,8 +1165,11 @@ document.addEventListener("input", ev => {
   if (k === "q") { st.q = ev.target.value; render(); }
   if (k === "edit") { st.edit.text = ev.target.value; st.edit.err = ""; }
 });
+document.addEventListener("input", ev => {
+  if (ev.target.id === "pk-q" && st.pk) { st.pk.q = ev.target.value; pickBody(); }
+});
 document.addEventListener("keydown", ev => {
-  if (ev.key === "Escape" && $("#layer").innerHTML) closeLayer();
+  if (ev.key === "Escape" && $("#layer").innerHTML) { st.pk = null; closeLayer(); }
   if (ev.key === "Enter" && ev.target.id === "bunker-in") loginBunker();
   if (ev.key === "Enter" && ev.target.id === "npub-in") loginNpub();
   if (ev.key === "Enter" && ev.target.id === "relay-in") ACT.addrelay();
