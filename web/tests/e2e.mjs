@@ -27,6 +27,16 @@ const seed = [
   ev(30078, [["d", "otra/ajustes"]], JSON.stringify({ tema: "claro" })),
   ev(10000, [["t", "spam"], ["p", "aa".repeat(32)]], enc(JSON.stringify([["word", "airdrop"]]))),
 ];
+// Fiabilidad: 2 seguidos con su lista de relays y un monitor NIP-66 que ve damus y nos.lol en línea
+const F1 = hexToBytes("11".repeat(32)), F2 = hexToBytes("22".repeat(32)), MON = hexToBytes("33".repeat(32));
+const T0 = Math.floor(Date.now() / 1000);
+seed.push(
+  ev(3, [["p", getPublicKey(F1)], ["p", getPublicKey(F2)]], ""),
+  finalizeEvent({ kind: 10002, created_at: T0, tags: [["r", "wss://relay.damus.io"], ["r", "wss://nos.lol/"]], content: "" }, F1),
+  finalizeEvent({ kind: 10002, created_at: T0, tags: [["r", "wss://relay.damus.io"]], content: "" }, F2),
+  finalizeEvent({ kind: 30166, created_at: T0 - 600, tags: [["d", "wss://relay.damus.io/"], ["rtt-open", "150"]], content: "" }, MON),
+  finalizeEvent({ kind: 30166, created_at: T0 - 900, tags: [["d", "wss://nos.lol/"], ["rtt-open", "300"]], content: "" }, MON),
+);
 if (parts.length < 2) throw new Error("se esperaban varias partes");
 
 const FAKE = `;(function(){
@@ -131,9 +141,27 @@ try {
   await page.click(".fh .fn:has-text(\"Usus\")").catch(() => {}); await page.screenshot({ path: "/tmp/web-pick.png" });
   await page.keyboard.press("Escape");
   await page.goBack(); await page.goBack();
+  // Simula que damus pierde la lista de silenciados (sin borrarla tú) y recarga
+  await page.evaluate(() => { const s = JSON.parse(localStorage.getItem("__relays")); s["wss://relay.damus.io"] = s["wss://relay.damus.io"].filter(e => e.kind !== 10000); localStorage.setItem("__relays", JSON.stringify(s)); });
+  await page.click("button[data-a=refresh]"); await page.waitForTimeout(800);
   // Listado completo de relays
   await page.click("button:text('3 relays')");
   await page.waitForSelector(".rcard");
+  await page.waitForTimeout(500);
+  const card = async h => (await page.locator(".rcard", { hasText: h }).textContent()) || "";
+  const starsOf = h => page.locator(".rcard", { hasText: h }).locator(".on-s").count();
+  ok((await card("nos.lol")).includes("1 seguidos") && (await card("Damus")).includes("2 seguidos"), "seguidos que usan cada relay (NIP-65)");
+  ok((await card("Damus")).includes("perdió 1") && await starsOf("Damus") <= 3 && await starsOf("Damus") >= 1, "damus perdió un dato: como mucho 3 estrellas");
+  ok(!(await card("nos.lol")).includes("perdió"), "lo que borraste tú de nos.lol no cuenta como pérdida");
+  ok(await starsOf("nos.lol") >= 4, "nos.lol: 4 o 5 estrellas (" + await starsOf("nos.lol") + ")");
+  ok((await card("primal")).includes("sin datos suficientes") || await starsOf("primal") <= 2, "primal (no responde): sin estrellas o pocas");
+  await page.click(".rcard:has-text('Damus')");
+  const fs = await page.locator(".sheet").textContent();
+  ok(fs.includes("Fiabilidad") && fs.includes("1 de 1 monitores lo ven en línea") && fs.includes("Ha perdido 1 de") && fs.includes("Ha perdido datos tuyos"), "ficha: sección de fiabilidad y aviso de pérdida");
+  await page.click(".how summary");
+  ok((await page.locator(".how").textContent()).includes("(tope)"), "tabla del cálculo con el tope");
+  await page.screenshot({ path: "/tmp/web-fiab.png", fullPage: false });
+  await page.keyboard.press("Escape");
   ok(await page.locator(".rcard").count() === 3, "listado: los 3 relays");
   await page.click(".chips.filters button:text('De pago')");
   ok(await page.locator(".rcard").count() === 1 && (await page.locator(".rcard").textContent()).includes("nos.lol"), "filtro de pago: solo nos.lol");

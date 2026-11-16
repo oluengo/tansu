@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tansu · Fiabilidad de los relays (demo)</title>
+<style>
+:root{--bg:#F6F5F1;--card:#fff;--ink:#1D1F27;--muted:#6B7080;--line:#E7E6E1;--soft:#EFEEEA;--accent:#4C5FD5;--acc-soft:#E9ECF8;--lock:#B5651D;--lock-soft:#FFF4E6;--ok:#2E8A5A;--ok-soft:#E3F2EA;--danger:#C2413B;--danger-soft:#FBE9E8;--star:#E9A23B;--star-off:#D9D7D0}
+*{box-sizing:border-box}body{margin:0;background:#E9E8E3;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+.wrap{max-width:1000px;margin:0 auto;padding:18px}
+h1{font-size:19px;margin:0 0 4px}.lead{color:var(--muted);margin:0 0 14px;font-size:14px}
+.stage{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:370px;height:780px;background:var(--bg);border-radius:30px;box-shadow:0 10px 40px rgba(0,0,0,.12);position:relative;overflow:hidden;flex:none}
+.scr{position:absolute;inset:0;overflow:auto;padding-bottom:24px}
+.top{display:flex;align-items:center;gap:10px;padding:16px 16px 6px}.top h2{font-size:19px;margin:0;flex:1}
+.note{color:var(--muted);font-size:12.5px;padding:0 18px 6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.fl{padding:4px 14px 8px;overflow-x:auto;flex-wrap:nowrap}.fl button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;white-space:nowrap}.fl button.on{background:var(--acc-soft);border-color:var(--accent);color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:8px 12px;display:block;width:calc(100% - 24px);text-align:left}
+.rh{display:flex;align-items:flex-start;gap:8px}.rh .t{flex:1;min-width:0}.rh b{display:block;font-size:15px}
+.mono{font-family:ui-monospace,Menlo,monospace}.small{font-size:12.5px}.muted{color:var(--muted)}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--muted);white-space:nowrap;display:inline-block}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-lock{background:var(--lock-soft);color:var(--lock)}.b-no{background:var(--danger-soft);color:var(--danger)}
+.stars{display:inline-flex;gap:1px;vertical-align:middle;line-height:1}.stars svg{width:15px;height:15px}.stars.big svg{width:22px;height:22px}
+.on-s{fill:var(--star)}.off-s{fill:var(--star-off)}
+.sumline{font-size:12.5px;margin-top:7px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--ok)}.dot.no{background:var(--danger)}.dot.unk{background:var(--star-off)}
+.shade{position:absolute;inset:0;background:rgba(20,22,30,.35);display:flex;align-items:flex-end}
+.sheet{background:var(--card);width:100%;max-height:92%;border-radius:22px 22px 0 0;overflow:auto;padding:16px 18px 20px}
+.sheet h3{margin:0;font-size:18px}
+.sec{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:18px 0 8px}
+.score{display:flex;align-items:center;gap:12px;background:#FBFAF7;border:1px solid var(--line);border-radius:14px;padding:12px}
+.score .v{font-size:13px}.score .v b{display:block;font-size:15px}
+.sig{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);align-items:flex-start}.sig:first-of-type{border-top:0}
+.sig .ic{width:28px;height:28px;border-radius:8px;background:var(--soft);display:grid;place-items:center;flex:none;font-size:14px}
+.sig .tx{flex:1;min-width:0}.sig .tx b{display:block;font-size:13.5px}.sig .tx span{font-size:12.5px;color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:var(--soft);margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--star)}
+.how{margin-top:10px;font-size:12.5px;color:var(--muted)}.how summary{cursor:pointer;color:var(--accent);font-weight:600}
+.how table{width:100%;border-collapse:collapse;margin-top:6px}.how td{padding:4px 0;border-top:1px solid var(--line)}.how td:last-child{text-align:right}
+.btn{display:block;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px;font-weight:600;font-size:14px;margin-top:8px;text-align:center}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.in{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:14px ui-monospace,Menlo,monospace}
+.warn{color:var(--lock);font-size:12.5px;margin-top:6px}
+.notes{flex:1;min-width:280px;max-width:540px;font-size:14px}
+.notes .card{margin:0 0 12px;width:100%}.notes h4{margin:0 0 6px;font-size:14px}.notes ul{margin:0;padding-left:18px}.notes li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tansu · Fiabilidad de los relays</h1>
+  <p class="lead">Demo interactiva con datos de ejemplo. Toca un relay para ver su ficha, o «+ Añadir relay» para ver cómo se valora uno nuevo antes de añadirlo.</p>
+  <div class="stage">
+    <div class="phone"><div class="scr" id="scr"></div><div id="layer"></div></div>
+    <div class="notes">
+      <div class="card"><h4>Las estrellas (1 a 5)</h4><ul>
+        <li>Resumen visual en el listado, en la ficha y al añadir un relay. Llenas en color = puntos; grises = lo que falta.</li>
+        <li>Salen de 4 señales con peso fijo: <b>disponibilidad</b> (40%), <b>conserva tus datos</b> (30%), <b>lo usan tus seguidos</b> (20%) y <b>velocidad</b> (10%).</li>
+        <li>Si falta una señal (p. ej. un relay nuevo no tiene historial tuyo), su peso se reparte entre las demás y se indica «valoración provisional».</li>
+        <li>Con menos de 2 señales no hay estrellas: «sin datos suficientes».</li>
+        <li>Para copias de seguridad, perder datos pesa más: si un relay ha perdido algo tuyo, <b>como mucho 3 estrellas</b> aunque el resto sea perfecto (ver Primal).</li>
+        <li>«¿Cómo se calcula?» enseña los puntos de cada señal: nada es una caja negra.</li></ul></div>
+      <div class="card"><h4>De dónde sale cada señal</h4><ul>
+        <li><b>Disponibilidad</b>: monitores NIP-66 (eventos 30166; se dice cuántos coinciden) + tu historial (respondió en X de Y cargas). Se guarda solo en tu dispositivo.</li>
+        <li><b>Conserva tus datos</b>: Tansu recuerda qué tenía cada relay; si algo desaparece sin que lo borres, cuenta como pérdida.</li>
+        <li><b>Seguidos</b>: cuántas cuentas que sigues lo tienen en su lista NIP-65.</li>
+        <li><b>Velocidad</b>: lo que tarda en responder (tuyo o de los monitores).</li></ul></div>
+      <div class="card"><h4>Límites</h4><ul>
+        <li>Un monitor puede equivocarse: se muestra cuántos coinciden, no se fía de uno solo.</li>
+        <li>Pago, login y límites de tamaño no restan estrellas: son condiciones, no fiabilidad. Siguen como avisos.</li></ul></div>
+    </div>
+  </div>
+</div>
+<script>
+// s: señales 0..1 (null = sin datos). mon: [monitores que lo ven en línea, total, hace]. hist: [respondió, cargas]. lost: datos perdidos. fol: seguidos que lo usan. ms: latencia
+const R = [
+  { u: "relay.damus.io", n: "Damus", role: "tu relay (NIP-65)", mon: [4, 4, "12 min"], hist: [30, 30], lost: 0, kept: 24, fol: 212, ms: 140, chips: ["gratis"] },
+  { u: "nos.lol", n: "nos.lol", role: "tu relay (NIP-65)", mon: [3, 4, "35 min"], hist: [27, 30], lost: 0, kept: 21, fol: 96, ms: 230, chips: ["de pago", "login"] },
+  { u: "relay.primal.net", n: "Primal", role: "relay de Tansu", mon: [4, 4, "8 min"], hist: [29, 30], lost: 3, kept: 24, fol: 154, ms: 180, chips: ["gratis"] },
+  { u: "relay.ejemplo.net", n: "relay.ejemplo.net", role: "añadido a mano", mon: [1, 4, "3 d"], hist: [9, 20], lost: 6, kept: 10, fol: 2, ms: 1400, chips: ["sin borrados"] },
+];
+const NEW = { u: "relay.nuevo.io", n: "Nuevo relay", role: "no está en tu lista", mon: [3, 3, "20 min"], hist: null, lost: null, kept: 0, fol: 18, ms: 260, chips: ["gratis"] };
+const W = { avail: 40, keep: 30, fol: 20, speed: 10 };
+function signals(r) {
+  const monA = r.mon ? r.mon[0] / r.mon[1] : null, histA = r.hist ? r.hist[0] / r.hist[1] : null;
+  const avail = monA == null && histA == null ? null : histA == null ? monA : monA == null ? histA : 0.4 * monA + 0.6 * histA;
+  const keep = r.lost == null || !r.kept ? null : Math.max(0, 1 - r.lost / Math.max(1, r.kept) * 2);
+  const fol = r.fol == null ? null : Math.min(1, Math.log10(1 + r.fol) / Math.log10(51));
+  const speed = r.ms == null ? null : Math.max(0, Math.min(1, (1500 - r.ms) / 1200));
+  return { avail, keep, fol, speed };
+}
+function rating(r) {
+  const s = signals(r), keys = Object.keys(W).filter(k => s[k] != null);
+  if (keys.length < 2) return null;
+  const wt = keys.reduce((a, k) => a + W[k], 0), score = keys.reduce((a, k) => a + s[k] * W[k], 0) / wt;
+  const raw = Math.max(1, Math.round(score * 5)), capped = r.lost > 0 && raw > 3;
+  return { score, stars: capped ? 3 : raw, capped, partial: keys.length < 4, s, keys, wt };
+}
+const STAR = c => `<svg viewBox="0 0 24 24"><path class="${c}" d="M12 2.6l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.3l-5.9 3.2 1.3-6.5L2.5 9.4l6.6-.8z"/></svg>`;
+const stars = (n, big) => n == null ? `<span class="small muted">sin datos suficientes</span>`
+  : `<span class="stars ${big ? "big" : ""}" aria-label="${n} de 5 estrellas">${[1, 2, 3, 4, 5].map(i => STAR(i <= n ? "on-s" : "off-s")).join("")}</span>`;
+const word = n => ["", "Poco fiable", "Irregular", "Aceptable", "Fiable", "Muy fiable"][n];
+const pct = x => Math.round(x * 100) + "%";
+let filter = "all", layer = null;
+
+function list() {
+  const shown = R.filter(r => filter === "all" || (filter === "low" && (rating(r)?.stars ?? 5) <= 2));
+  return `<div class="top"><span style="font-size:20px">←</span><h2>Todos los relays</h2></div>
+  <p class="note">Relays que se comprueban en esta cuenta. Toca uno para ver su ficha.</p>
+  <div class="chips fl"><button class="${filter === "all" ? "on" : ""}" data-a="f" data-x="all">Todos</button><button>De pago</button><button>Con login</button><button>Sin borrados</button><button class="${filter === "low" ? "on" : ""}" data-a="f" data-x="low">Poco fiables</button></div>
+  ${shown.map((r, i) => { const g = rating(r); return `<button class="card" data-a="open" data-x="${R.indexOf(r)}">
+    <div class="rh"><span class="t"><b>${r.n}</b>${r.n !== r.u ? `<span class="mono small muted">${r.u}</span>` : ""}</span>${stars(g?.stars)}</div>
+    <div class="sumline"><span class="dot ${r.mon[0] / r.mon[1] < .5 ? "no" : ""}"></span>${r.mon[0] / r.mon[1] < .5 ? "caído a menudo" : "en línea"} · ${r.fol} seguidos · ${pct(r.hist[0] / r.hist[1])} respondió${r.lost ? ` · <span style="color:var(--lock)">perdió ${r.lost}</span>` : ""}</div>
+    <div class="chips" style="margin-top:7px">${r.chips.map(c => `<span class="badge ${c === "gratis" ? "b-ok" : "b-lock"}">${c}</span>`).join("")}<span class="badge">${r.ms} ms</span><span class="badge" style="background:none">${r.role}</span></div></button>`; }).join("")}
+  <button class="card" style="text-align:center;font-weight:600" data-a="add">+ Añadir relay</button>`;
+}
+function fiab(r) {
+  const g = rating(r), s = g?.s || signals(r);
+  const sig = (ic, title, body, v, k) => `<div class="sig"><span class="ic">${ic}</span><span class="tx"><b>${title}</b><span>${body}</span>${v == null ? "" : `<div class="bar"><i style="width:${pct(v)}"></i></div>`}</span></div>`;
+  return `<div class="sec">Fiabilidad</div>
+  <div class="score">${stars(g?.stars, true)}<span class="v"><b>${g ? word(g.stars) : "Sin valorar"}</b>${g?.partial ? "valoración provisional: faltan señales" : g ? "con las 4 señales" : ""}</span></div>
+  <div style="margin-top:8px">
+    ${sig("📡", "Disponibilidad", `${r.mon[0]} de ${r.mon[1]} monitores lo ven en línea (último: hace ${r.mon[2]})` + (r.hist ? ` · tú: respondió en ${r.hist[0]} de ${r.hist[1]} cargas` : " · sin historial tuyo"), s.avail)}
+    ${sig("🗄", "Conserva tus datos", r.lost == null ? "Aún no tiene datos tuyos" : r.lost ? `Ha perdido ${r.lost} de ${r.kept} datos que tenía sin que los borraras` : `Sigue teniendo los ${r.kept} datos que le copiaste`, s.keep)}
+    ${sig("👥", "Lo usan tus seguidos", `${r.fol} cuentas que sigues lo tienen en su lista (NIP-65)`, s.fol)}
+    ${sig("⚡", "Velocidad", `${r.ms} ms de respuesta`, s.speed)}
+  </div>
+  ${g ? `<details class="how"><summary>¿Cómo se calcula?</summary><table>${Object.keys(W).map(k => `<tr><td>${{ avail: "Disponibilidad", keep: "Conserva tus datos", fol: "Seguidos", speed: "Velocidad" }[k]} (${W[k]}%)</td><td>${s[k] == null ? "sin datos · su peso se reparte" : pct(s[k])}</td></tr>`).join("")}
+    <tr><td><b>Total</b></td><td><b>${pct(g.score)} → ${g.stars} ★${g.capped ? " (tope)" : ""}</b></td></tr></table>
+    <p style="margin:6px 0 0">1★ hasta 30% · 2★ 30–50% · 3★ 50–70% · 4★ 70–90% · 5★ desde 90%. Si ha perdido datos tuyos, como mucho 3★. Pago, login y límites no cuentan: salen como avisos.</p></details>` : ""}`;
+}
+function ficha(r, isNew) {
+  return `<div class="shade" data-a="shade"><div class="sheet">
+    <h3>${r.n}</h3><div class="mono small muted">wss://${r.u}</div>
+    <div class="chips" style="margin:8px 0">${r.chips.map(c => `<span class="badge ${c === "gratis" ? "b-ok" : "b-lock"}">${c}</span>`).join("")}<span class="badge">${r.ms} ms</span></div>
+    ${r.lost ? `<div class="warn">⚠ Ha perdido datos tuyos: no lo uses como única copia</div>` : ""}
+    ${fiab(r)}
+    <div class="sec">Acceso · Límites · NIPs · Quién lo lleva</div><p class="small muted" style="margin:0">(igual que ahora)</p>
+    ${isNew ? `<button class="btn p">Añadir a los relays de Tansu</button><button class="btn" data-a="close">Cancelar</button>`
+      : `<div class="sec">En esta cuenta</div><p class="small" style="margin:0">Papel: ${r.role}</p><button class="btn">Elegir qué copiar aquí…</button><button class="btn">Copiar dirección</button>`}
+  </div></div>`;
+}
+function addDlg() {
+  return `<div class="shade" data-a="shade"><div class="sheet"><h3>Añadir relay</h3><p class="small muted">Antes de añadirlo verás su ficha y su valoración.</p>
+    <input class="in" value="wss://relay.nuevo.io"><button class="btn p" data-a="newficha">Ver ficha</button><button class="btn" data-a="close">Cancelar</button></div></div>`;
+}
+function render() {
+  document.getElementById("scr").innerHTML = list();
+  document.getElementById("layer").innerHTML = layer == null ? "" : layer === "add" ? addDlg() : layer === "new" ? ficha(NEW, true) : ficha(R[layer]);
+}
+const A = {
+  f: x => { filter = x; render(); }, open: x => { layer = +x; render(); }, add: () => { layer = "add"; render(); },
+  newficha: () => { layer = "new"; render(); }, close: () => { layer = null; render(); },
+  shade: (x, el, ev) => { if (ev.target === el) { layer = null; render(); } },
+};
+document.addEventListener("click", ev => { const el = ev.target.closest("[data-a]"); if (el) A[el.dataset.a]?.(el.dataset.x, el, ev); });
+render();
+</script>
+</body>
+</html>
