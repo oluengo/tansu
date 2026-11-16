@@ -50,7 +50,8 @@ class AppContainer(app: Application) {
     val signer = Signer(app, relays)
     val vault = Vault(relays)
     val profiles = io.github.oluengo.tansu.data.Profiles(vault, accounts, appScope)
-    val explorer = Explorer(accounts, signer, vault, Trash(File(app.filesDir, "trash.json")), appScope)
+    val relayInfo = io.github.oluengo.tansu.nostr.RelayInfoClient(http)
+    val explorer = Explorer(relayInfo, relays, accounts, signer, vault, Trash(File(app.filesDir, "trash.json")), appScope)
 
     fun start() {
         explorer.start()

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.5 (beta)
+
+- Relay info sheets (NIP-11): tap a relay in an item's "Relays" block to see what it says about itself — free or paid (fees and payment page), login (NIP-42), restricted writes, size limits, supported NIPs, operator, contact, terms and software — plus its role in the account (NIP-65 or Tansu), response time and how many items are up to date, old or missing there, with "Copy here what is missing".
+- "All relays": a full list with every relay of the account and its summary, filters (paid, login, no deletions, no answer) and "Add relay". From the home footer ("N relays") and Settings → Relays.
+- Warnings under each relay in an item: too small for this copy (its size limit is below the item), does not announce deletions (NIP-09), and the last rejection reason the relay gave.
+- What a relay says about itself is voluntary and not verified; Tansu only reads it.
+
 ## 0.3.4 (beta)
 
 - Relays block: "Copy to the ones missing it" and "Copy to another relay…" are now stacked, full width and with the same style.

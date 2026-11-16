@@ -62,6 +62,7 @@ sealed interface Route {
     data class Edit(val d: String) : Route
     data class ListItem(val address: String) : Route
     data object Settings : Route
+    data object Relays : Route
 }
 
 @Composable
@@ -87,7 +88,7 @@ private fun Main(c: AppContainer) {
     var switcher by remember { mutableStateOf(false) }
 
     when (val r = stack.last()) {
-        Route.Settings -> SettingsScreen(c, onBack = back)
+        Route.Settings -> SettingsScreen(c, onBack = back, onRelays = { go(Route.Relays) })
         else -> ExplorerScreen(c, r, go, back, onAccounts = { switcher = true }, onSettings = { go(Route.Settings) })
     }
     if (switcher) AccountSwitcher(c) { switcher = false }

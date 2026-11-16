@@ -33,7 +33,29 @@ data class Snapshot(
     val reached: Set<String> = emptySet(),
     /** Por relay: dirección → (id, fecha) de la versión más nueva que tiene ese relay. */
     val index: Map<String, Map<String, Pair<String, Long>>> = emptyMap(),
+    /** Por relay: milisegundos que tardó en conectar. */
+    val latency: Map<String, Long> = emptyMap(),
+    /** Relays de la lista NIP-65 de la cuenta (el resto son los de Tansu). */
+    val own: Set<String> = emptySet(),
 ) {
+    /** Todo lo que hay en la cuenta, como grupos de eventos (cada entrada o lista). */
+    val items: List<List<Event>> get() = entries.map { it.events } + lists.map { listOf(it) }
+
+    /** (al día, antiguos o incompletos, faltan) de la cuenta en [relay]; null si no respondió. */
+    fun stats(relay: String): Triple<Int, Int, Int>? {
+        if (relay !in reached) return null
+        val st = items.map { ev -> copies(ev).first { it.relay == relay }.state }
+        return Triple(
+            st.count { it == RelayCopy.State.CURRENT },
+            st.count { it == RelayCopy.State.OLDER || it == RelayCopy.State.PARTIAL },
+            st.count { it == RelayCopy.State.MISSING },
+        )
+    }
+
+    /** Grupos de eventos que [relay] no tiene o tiene anticuados. */
+    fun missingAt(relay: String): List<List<Event>> =
+        if (relay !in reached) emptyList() else items.filter { ev -> copies(ev).first { it.relay == relay }.needsSync }
+
     /** Estado de [events] (una entrada o una lista) en cada relay de la cuenta. */
     fun copies(events: List<Event>): List<RelayCopy> = relays.map { r ->
         if (r !in reached) return@map RelayCopy(r, RelayCopy.State.UNKNOWN)
@@ -71,15 +93,18 @@ class Vault(private val pool: RelayPool) {
     private fun now() = System.currentTimeMillis() / 1000
 
     /** Relays donde vive la cuenta: su lista NIP-65 (todas) más los de Tansu. */
-    suspend fun relaysFor(pubkey: String): List<String> {
+    suspend fun relaysFor(pubkey: String): List<String> = (nip65(pubkey).take(6) + RelayPool.DEFAULT).distinct()
+
+    /** Relays que la cuenta publica en su lista NIP-65. */
+    suspend fun nip65(pubkey: String): List<String> {
         val ev = pool.query(RelayPool.INDEXERS + RelayPool.DEFAULT, listOf(Filter(kinds = listOf(Kinds.RELAY_LIST), authors = listOf(pubkey), limit = 1)))
             .filter { it.pubkey == pubkey }.maxByOrNull { it.createdAt }
-        val own = ev?.tagsNamed("r")?.mapNotNull { t -> t.getOrNull(1)?.let(RelayPool::normalize) }.orEmpty()
-        return (own.take(6) + RelayPool.DEFAULT).distinct()
+        return ev?.tagsNamed("r")?.mapNotNull { t -> t.getOrNull(1)?.let(RelayPool::normalize) }.orEmpty().distinct()
     }
 
     suspend fun load(pubkey: String): Snapshot {
-        val relays = relaysFor(pubkey)
+        val own = nip65(pubkey)
+        val relays = (own.take(6) + RelayPool.DEFAULT).distinct()
         val results = pool.queryEach(
             relays,
             listOf(
@@ -98,6 +123,8 @@ class Vault(private val pool: RelayPool) {
         return Snapshot(
             pubkey, relays, AppData.group(events), Lists.latest(events), System.currentTimeMillis(),
             reached = results.filter { it.reached }.map { it.url }.toSet(), index = index,
+            latency = results.mapNotNull { r -> r.ms?.let { r.url to it } }.toMap(),
+            own = own.toSet(),
         )
     }
 

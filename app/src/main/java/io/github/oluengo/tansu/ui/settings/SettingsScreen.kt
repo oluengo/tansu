@@ -99,7 +99,7 @@ private enum class Section(@StringRes val title: Int, val icon: ImageVector) {
 }
 
 @Composable
-fun SettingsScreen(c: AppContainer, onBack: () -> Unit) {
+fun SettingsScreen(c: AppContainer, onBack: () -> Unit, onRelays: () -> Unit = {}) {
     var section by rememberSaveable { mutableStateOf<Section?>(null) }
     BackHandler(enabled = section != null) { section = null }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -112,7 +112,7 @@ fun SettingsScreen(c: AppContainer, onBack: () -> Unit) {
                 null -> Index(c) { section = it }
                 Section.ACCOUNTS -> AccountsSection(c)
                 Section.APPEARANCE -> AppearanceSection(c)
-                Section.RELAYS -> RelaysSection(c)
+                Section.RELAYS -> RelaysSection(c, onRelays)
                 Section.TRASH -> TrashSection(c)
                 Section.ABOUT -> AboutSection()
             }
@@ -267,7 +267,7 @@ private fun AppearanceSection(c: AppContainer) {
 // ---------- Relays ----------
 
 @Composable
-private fun RelaysSection(c: AppContainer) {
+private fun RelaysSection(c: AppContainer, onRelays: () -> Unit) {
     val s by c.settings.flow.collectAsStateWithLifecycle(initialValue = AppSettings())
     val st by c.explorer.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -280,6 +280,7 @@ private fun RelaysSection(c: AppContainer) {
         if (r !in mine) save(mine + r)
         input = ""; invalid = false
     }
+    if (st.snapshot != null) OutlinedButton(onClick = onRelays, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ri_see_all)) }
     Group {
         Text(stringResource(R.string.relays_app), fontWeight = FontWeight.SemiBold)
         Text(stringResource(R.string.relays_app_sub), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
