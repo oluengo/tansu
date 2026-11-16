@@ -1,6 +1,18 @@
 # Changelog
 
-## 0.3.7 (beta)
+## 0.3.7
+
+First stable release. It brings together everything tested in the betas (0.1.0 to 0.3.6, below):
+
+- Several Nostr accounts (Amber, bunker, browser extension on the web, or npub read-only). Tansu never sees your nsec.
+- App data explorer (NIP-78) by folders, including multi-part Usus backups: decrypt, view (Visual or Code), edit, export, copy to another account, delete with a local trash.
+- NIP-51 lists: view and edit the private part; nothing public is ever added.
+- Only encrypted writes (NIP-44 for your own account): nothing readable is ever published.
+- Where each item lives, relay by relay: copy this item or a chosen selection to a relay, delete from a specific relay.
+- Relay info sheets (NIP-11), full relay list with filters, and reliability with stars.
+- Android app and web version (optional PWA), in Catalan, Spanish and English.
+
+New in this version:
 
 - Relay reliability, with 1 to 5 stars (filled in colour = points, grey = missing) in the relay list, in each relay's sheet and when adding a relay. Four signals with fixed weights: availability 40% (NIP-66 monitors, kind 30166, plus your own history of loads), keeps your data 30%, used by people you follow 20% (their NIP-65 lists) and speed 10%. A missing signal shares its weight among the others ("provisional rating"); with fewer than two there are no stars. "How is it calculated?" shows the points of each signal.
 - Backups first: if a relay has lost data of yours without you deleting it, it gets at most 3 stars and a warning ("do not use it as your only copy"). What you delete from a relay yourself does not count.
