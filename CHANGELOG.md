@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.6 (beta)
+
+- Copying to a relay no longer sends everything at once. The relay sheet, opened from an item, offers "Copy this item here" first, and "Choose what to copy here…" opens a picker.
+- Picker built for accounts with a lot of data: only what is not up to date on that relay by default (or "All"), grouped by folder and collapsed, a checkbox per folder (all / some / none), "Show N more", search by name, and an always-visible summary (items, events, size). Coming from an item, that item is preselected and marked "where you are"; from "All relays", nothing is preselected.
+- A multi-part backup (Usus) counts as one item ("12 parts · 480 kB") and is sent whole.
+- Items that are not encrypted, or bigger than the relay's size limit (from its info sheet), can't be selected; the reason is shown.
+- The buttons in an item's "Relays" block now say "this item", to make clear they copy nothing else.
+
 ## 0.3.5 (beta)
 
 - Relay info sheets (NIP-11): tap a relay in an item's "Relays" block to see what it says about itself — free or paid (fees and payment page), login (NIP-42), restricted writes, size limits, supported NIPs, operator, contact, terms and software — plus its role in the account (NIP-65 or Tansu), response time and how many items are up to date, old or missing there, with "Copy here what is missing".

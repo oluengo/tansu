@@ -91,7 +91,7 @@ try {
   ok((await rel("relay.damus.io")).includes("al día"), "damus: al día");
   ok((await rel("nos.lol")).includes("no está"), "nos.lol: no está");
   ok((await rel("relay.primal.net")).includes("sin respuesta"), "primal: sin respuesta");
-  await page.click("button:text('Copiar a los que faltan (1)')");
+  await page.click("button:text('Copiar este dato a los que faltan (1)')");
   await idle(page);
   await page.waitForTimeout(300);
   ok((await rel("nos.lol")).includes("al día"), "tras copiar: nos.lol al día (sin firmar nada nuevo)");
@@ -105,7 +105,7 @@ try {
   ok(!!del && del.tags.some(t => t[0] === "a" && t[1].endsWith(":wavestr/favorites")), "petición de borrado NIP-09 firmada");
   ok(await page.evaluate(() => (JSON.parse(localStorage.getItem("__relays"))["wss://relay.damus.io"] || []).every(e => e.kind !== 5)), "la petición de borrado solo fue a nos.lol");
   // Copiar a un relay que no es de la cuenta
-  await page.click("button:text('Copiar a otro relay…')");
+  await page.click("button:text('Copiar este dato a otro relay…')");
   await page.fill("#other-in", "otro.example.com");
   await page.click(".dialog button:text('Copiar')");
   await idle(page);
@@ -120,6 +120,16 @@ try {
   ok(sh.includes("gratis") && sh.includes("NIP-09") && sh.includes("strfry 1.0") && sh.includes("tu relay") === false, "ficha de damus: gratis, NIPs, software");
   await page.screenshot({ path: "/tmp/web-ficha.png" });
   await page.keyboard.press("Escape");
+  // Desde dentro del dato: copiar solo este, o elegir
+  await page.click(".rlink:text-is('nos.lol')");
+  await page.waitForSelector(".sheet button:has-text('Copiar aquí este dato')");
+  ok(await page.locator(".sheet button", { hasText: "Elegir qué copiar aquí…" }).count() === 1, "ficha desde el dato: copiar este dato o elegir");
+  await page.click(".sheet button:has-text('Elegir qué copiar aquí…')");
+  await page.waitForSelector(".pk-bar");
+  ok(await page.locator(".it.here .cb.on").count() === 1 && (await page.locator(".it.here").textContent()).includes("donde estás"), "selector: el dato donde estás viene marcado");
+  ok((await page.locator(".pk-bar").textContent()).includes("1 dato · 1 evento"), "resumen: 1 dato · 1 evento");
+  await page.click(".fh .fn:has-text(\"Usus\")").catch(() => {}); await page.screenshot({ path: "/tmp/web-pick.png" });
+  await page.keyboard.press("Escape");
   await page.goBack(); await page.goBack();
   // Listado completo de relays
   await page.click("button:text('3 relays')");
@@ -129,8 +139,13 @@ try {
   ok(await page.locator(".rcard").count() === 1 && (await page.locator(".rcard").textContent()).includes("nos.lol"), "filtro de pago: solo nos.lol");
   await page.click(".rcard");
   const sh2 = await page.locator(".sheet").textContent();
-  ok(sh2.includes("de pago") && sh2.includes("alta: 21 sats") && sh2.includes("Copiar aquí lo que falta (1)"), "ficha de nos.lol: pago, tarifa y copiar lo que falta");
-  await page.click(".sheet button:text('Copiar aquí lo que falta (1)')");
+  ok(sh2.includes("de pago") && sh2.includes("alta: 21 sats") && sh2.includes("1 dato no está al día en este relay") && !sh2.includes("Copiar aquí este dato"), "ficha de nos.lol: pago, tarifa y elegir (sin copiar todo)");
+  await page.click(".sheet button:has-text('Elegir qué copiar aquí…')");
+  await page.waitForSelector(".pk-bar");
+  ok(await page.locator(".pkb, .cb.on").count() === 0 && await page.locator(".pk-bar button:disabled").count() === 1, "desde el listado no hay nada marcado");
+  await page.fill("#pk-q", "fav");
+  await page.click(".it:has-text('wavestr/favorites')");
+  await page.click(".pk-bar button:has-text('Copiar 1 a nos.lol')");
   await idle(page); await page.waitForTimeout(300);
   ok(await page.evaluate(() => (JSON.parse(localStorage.getItem("__relays"))["wss://nos.lol"] || []).some(e => (e.tags[0] || [])[1] === "wavestr/favorites")), "copiado a nos.lol lo que le faltaba");
   await page.click(".chips.filters button:text('Sin respuesta')");

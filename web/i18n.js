@@ -163,14 +163,14 @@ window.TANSU_I18N = {
 "relay_partial": "incomplete",
 "relay_missing": "not there",
 "relay_unknown": "no answer",
-"relays_sync": "Copy to the ones missing it (%1$d)",
-"relays_sync_note": "The same event is sent, already signed and encrypted: nothing new is signed.",
+"relays_sync": "Copy this item to the ones missing it (%1$d)",
+"relays_sync_note": "The same event is sent, already signed and encrypted: nothing new is signed. Only this item: to choose others, tap a relay.",
 "relays_synced": "Copied to %1$d relays.",
 "relays_badge": "%1$d/%2$d relays",
 "relays_where_note": "Only your relays (NIP-65) and the Tansu ones are checked.",
 "relay_copy_here": "Copy here",
 "relay_delete_here": "Delete from this relay",
-"relay_copy_other": "Copy to another relay…",
+"relay_copy_other": "Copy this item to another relay…",
 "relay_copied_to": "Copied to %1$s.",
 "relay_copied_hint": "To see its status here, add it in Settings → Relays.",
 "relay_delete_title": "Delete from %1$s?",
@@ -223,7 +223,23 @@ window.TANSU_I18N = {
 "ri_role": "Role",
 "ri_data": "Your data",
 "ri_latency": "Response",
-"ri_sync_here": "Copy here what is missing (%1$d)",
+"ri_copy_this": "Copy this item here",
+"ri_pick": "Choose what to copy here…",
+"pk_title": "Copy to %1$s",
+"pk_mode_miss": "Not up to date (%1$d)",
+"pk_mode_all": "All (%1$d)",
+"pk_search": "Search by name",
+"pk_select_missing": "Choose all that is missing (%1$d)",
+"pk_clear": "Clear selection",
+"pk_group_all": "%1$d in total · %2$d not up to date",
+"pk_chosen": "%1$d chosen",
+"pk_here": "where you are",
+"pk_more": "Show %1$d more",
+"pk_nothing": "Nothing matches.",
+"pk_choose": "Choose what to copy",
+"pk_go": "Copy %1$d to %2$s",
+"pk_w_plain": "Not encrypted: Tansu does not resend it",
+"pk_w_big": "Too big for this relay (max %1$s)",
 "ri_copy_url": "Copy address",
 "ri_remove_tansu": "Remove from Tansu relays",
 "ri_add_tansu": "Add to Tansu relays",
@@ -445,14 +461,14 @@ window.TANSU_I18N = {
 "relay_partial": "incompleta",
 "relay_missing": "no está",
 "relay_unknown": "sin respuesta",
-"relays_sync": "Copiar a los que faltan (%1$d)",
-"relays_sync_note": "Se envía el mismo evento, ya firmado y cifrado: no se firma nada nuevo.",
+"relays_sync": "Copiar este dato a los que faltan (%1$d)",
+"relays_sync_note": "Se envía el mismo evento, ya firmado y cifrado: no se firma nada nuevo. Solo este dato: para elegir otros, toca un relay.",
 "relays_synced": "Copiado a %1$d relays.",
 "relays_badge": "%1$d/%2$d relays",
 "relays_where_note": "Solo se comprueban tus relays (NIP-65) y los de Tansu.",
 "relay_copy_here": "Copiar aquí",
 "relay_delete_here": "Borrar de este relay",
-"relay_copy_other": "Copiar a otro relay…",
+"relay_copy_other": "Copiar este dato a otro relay…",
 "relay_copied_to": "Copiado a %1$s.",
 "relay_copied_hint": "Para ver su estado aquí, añádelo en Ajustes → Relays.",
 "relay_delete_title": "¿Borrar de %1$s?",
@@ -505,7 +521,23 @@ window.TANSU_I18N = {
 "ri_role": "Papel",
 "ri_data": "Tus datos",
 "ri_latency": "Respuesta",
-"ri_sync_here": "Copiar aquí lo que falta (%1$d)",
+"ri_copy_this": "Copiar aquí este dato",
+"ri_pick": "Elegir qué copiar aquí…",
+"pk_title": "Copiar a %1$s",
+"pk_mode_miss": "No está al día (%1$d)",
+"pk_mode_all": "Todo (%1$d)",
+"pk_search": "Buscar por nombre",
+"pk_select_missing": "Elegir todo lo que falta (%1$d)",
+"pk_clear": "Quitar selección",
+"pk_group_all": "%1$d en total · %2$d no al día",
+"pk_chosen": "%1$d elegidos",
+"pk_here": "donde estás",
+"pk_more": "Ver %1$d más",
+"pk_nothing": "Nada coincide.",
+"pk_choose": "Elige qué copiar",
+"pk_go": "Copiar %1$d a %2$s",
+"pk_w_plain": "Sin cifrar: Tansu no lo reenvía",
+"pk_w_big": "Demasiado grande para este relay (máx. %1$s)",
 "ri_copy_url": "Copiar dirección",
 "ri_remove_tansu": "Quitar de los relays de Tansu",
 "ri_add_tansu": "Añadir a los relays de Tansu",
@@ -727,14 +759,14 @@ window.TANSU_I18N = {
 "relay_partial": "incompleta",
 "relay_missing": "no hi és",
 "relay_unknown": "sense resposta",
-"relays_sync": "Copia als que en falten (%1$d)",
-"relays_sync_note": "S'envia el mateix esdeveniment, ja signat i xifrat: no se signa res de nou.",
+"relays_sync": "Copia aquesta dada als que en falten (%1$d)",
+"relays_sync_note": "S'envia el mateix esdeveniment, ja signat i xifrat: no se signa res de nou. Només aquesta dada: per triar-ne d'altres, toca un relay.",
 "relays_synced": "Copiat a %1$d relays.",
 "relays_badge": "%1$d/%2$d relays",
 "relays_where_note": "Només es comproven els teus relays (NIP-65) i els de Tansu.",
 "relay_copy_here": "Copia-ho aquí",
 "relay_delete_here": "Esborra d'aquest relay",
-"relay_copy_other": "Copia a un altre relay…",
+"relay_copy_other": "Copia aquesta dada a un altre relay…",
 "relay_copied_to": "Copiat a %1$s.",
 "relay_copied_hint": "Per veure'n l'estat aquí, afegeix-lo a Configuració → Relays.",
 "relay_delete_title": "Vols esborrar-ho de %1$s?",
@@ -787,7 +819,23 @@ window.TANSU_I18N = {
 "ri_role": "Paper",
 "ri_data": "Les teves dades",
 "ri_latency": "Resposta",
-"ri_sync_here": "Copia aquí el que hi falta (%1$d)",
+"ri_copy_this": "Copia aquí aquesta dada",
+"ri_pick": "Tria què copiar aquí…",
+"pk_title": "Copia a %1$s",
+"pk_mode_miss": "No està al dia (%1$d)",
+"pk_mode_all": "Tot (%1$d)",
+"pk_search": "Cerca per nom",
+"pk_select_missing": "Tria tot el que hi falta (%1$d)",
+"pk_clear": "Treu la selecció",
+"pk_group_all": "%1$d en total · %2$d no al dia",
+"pk_chosen": "%1$d triats",
+"pk_here": "on ets",
+"pk_more": "Mostra'n %1$d més",
+"pk_nothing": "No hi coincideix res.",
+"pk_choose": "Tria què copiar",
+"pk_go": "Copia'n %1$d a %2$s",
+"pk_w_plain": "Sense xifrar: Tansu no la reenvia",
+"pk_w_big": "Massa gran per a aquest relay (màx. %1$s)",
 "ri_copy_url": "Copia l'adreça",
 "ri_remove_tansu": "Treu dels relays de Tansu",
 "ri_add_tansu": "Afegeix als relays de Tansu",
@@ -874,6 +922,22 @@ window.TANSU_I18N = {
 "Copied %d item here.",
 "Copied %d items here."
 ],
+"ri_pick_sub": [
+"%d item is not up to date on this relay",
+"%d items are not up to date on this relay"
+],
+"pk_group_miss": [
+"%d not up to date",
+"%d not up to date"
+],
+"pk_items": [
+"%d item",
+"%d items"
+],
+"pk_events": [
+"%d event",
+"%d events"
+],
 "relays_count": [
 "%d Tansu relay",
 "%d Tansu relays"
@@ -912,6 +976,22 @@ window.TANSU_I18N = {
 "Copiado %d dato aquí.",
 "Copiados %d datos aquí."
 ],
+"ri_pick_sub": [
+"%d dato no está al día en este relay",
+"%d datos no están al día en este relay"
+],
+"pk_group_miss": [
+"%d no está al día",
+"%d no están al día"
+],
+"pk_items": [
+"%d dato",
+"%d datos"
+],
+"pk_events": [
+"%d evento",
+"%d eventos"
+],
 "relays_count": [
 "%d relay de Tansu",
 "%d relays de Tansu"
@@ -949,6 +1029,22 @@ window.TANSU_I18N = {
 "ri_synced_here": [
 "Copiada %d dada aquí.",
 "Copiades %d dades aquí."
+],
+"ri_pick_sub": [
+"%d dada no està al dia en aquest relay",
+"%d dades no estan al dia en aquest relay"
+],
+"pk_group_miss": [
+"%d no està al dia",
+"%d no estan al dia"
+],
+"pk_items": [
+"%d dada",
+"%d dades"
+],
+"pk_events": [
+"%d esdeveniment",
+"%d esdeveniments"
 ],
 "relays_count": [
 "%d relay de Tansu",

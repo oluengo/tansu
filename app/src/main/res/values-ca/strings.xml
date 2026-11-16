@@ -161,14 +161,14 @@
     <string name="relay_partial">incompleta</string>
     <string name="relay_missing">no hi és</string>
     <string name="relay_unknown">sense resposta</string>
-    <string name="relays_sync">Copia als que en falten (%1$d)</string>
-    <string name="relays_sync_note">S\'envia el mateix esdeveniment, ja signat i xifrat: no se signa res de nou.</string>
+    <string name="relays_sync">Copia aquesta dada als que en falten (%1$d)</string>
+    <string name="relays_sync_note">S\'envia el mateix esdeveniment, ja signat i xifrat: no se signa res de nou. Només aquesta dada: per triar-ne d\'altres, toca un relay.</string>
     <string name="relays_synced">Copiat a %1$d relays.</string>
     <string name="relays_badge">%1$d/%2$d relays</string>
     <string name="relays_where_note">Només es comproven els teus relays (NIP-65) i els de Tansu.</string>
     <string name="relay_copy_here">Copia-ho aquí</string>
     <string name="relay_delete_here">Esborra d\'aquest relay</string>
-    <string name="relay_copy_other">Copia a un altre relay…</string>
+    <string name="relay_copy_other">Copia aquesta dada a un altre relay…</string>
     <string name="relay_copied_to">Copiat a %1$s.</string>
     <string name="relay_copied_hint">Per veure\'n l\'estat aquí, afegeix-lo a Configuració → Relays.</string>
     <string name="relay_delete_title">Vols esborrar-ho de %1$s?</string>
@@ -221,7 +221,23 @@
     <string name="ri_role">Paper</string>
     <string name="ri_data">Les teves dades</string>
     <string name="ri_latency">Resposta</string>
-    <string name="ri_sync_here">Copia aquí el que hi falta (%1$d)</string>
+    <string name="ri_copy_this">Copia aquí aquesta dada</string>
+    <string name="ri_pick">Tria què copiar aquí…</string>
+    <string name="pk_title">Copia a %1$s</string>
+    <string name="pk_mode_miss">No està al dia (%1$d)</string>
+    <string name="pk_mode_all">Tot (%1$d)</string>
+    <string name="pk_search">Cerca per nom</string>
+    <string name="pk_select_missing">Tria tot el que hi falta (%1$d)</string>
+    <string name="pk_clear">Treu la selecció</string>
+    <string name="pk_group_all">%1$d en total · %2$d no al dia</string>
+    <string name="pk_chosen">%1$d triats</string>
+    <string name="pk_here">on ets</string>
+    <string name="pk_more">Mostra\'n %1$d més</string>
+    <string name="pk_nothing">No hi coincideix res.</string>
+    <string name="pk_choose">Tria què copiar</string>
+    <string name="pk_go">Copia\'n %1$d a %2$s</string>
+    <string name="pk_w_plain">Sense xifrar: Tansu no la reenvia</string>
+    <string name="pk_w_big">Massa gran per a aquest relay (màx. %1$s)</string>
     <string name="ri_copy_url">Copia l\'adreça</string>
     <string name="ri_remove_tansu">Treu dels relays de Tansu</string>
     <string name="ri_add_tansu">Afegeix als relays de Tansu</string>
@@ -287,6 +303,22 @@
     <plurals name="ri_synced_here">
         <item quantity="one">Copiada %d dada aquí.</item>
         <item quantity="other">Copiades %d dades aquí.</item>
+    </plurals>
+    <plurals name="ri_pick_sub">
+        <item quantity="one">%d dada no està al dia en aquest relay</item>
+        <item quantity="other">%d dades no estan al dia en aquest relay</item>
+    </plurals>
+    <plurals name="pk_group_miss">
+        <item quantity="one">%d no està al dia</item>
+        <item quantity="other">%d no estan al dia</item>
+    </plurals>
+    <plurals name="pk_items">
+        <item quantity="one">%d dada</item>
+        <item quantity="other">%d dades</item>
+    </plurals>
+    <plurals name="pk_events">
+        <item quantity="one">%d esdeveniment</item>
+        <item quantity="other">%d esdeveniments</item>
     </plurals>
     <plurals name="relays_count">
         <item quantity="one">%d relay de Tansu</item>

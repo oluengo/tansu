@@ -161,14 +161,14 @@
     <string name="relay_partial">incomplete</string>
     <string name="relay_missing">not there</string>
     <string name="relay_unknown">no answer</string>
-    <string name="relays_sync">Copy to the ones missing it (%1$d)</string>
-    <string name="relays_sync_note">The same event is sent, already signed and encrypted: nothing new is signed.</string>
+    <string name="relays_sync">Copy this item to the ones missing it (%1$d)</string>
+    <string name="relays_sync_note">The same event is sent, already signed and encrypted: nothing new is signed. Only this item: to choose others, tap a relay.</string>
     <string name="relays_synced">Copied to %1$d relays.</string>
     <string name="relays_badge">%1$d/%2$d relays</string>
     <string name="relays_where_note">Only your relays (NIP-65) and the Tansu ones are checked.</string>
     <string name="relay_copy_here">Copy here</string>
     <string name="relay_delete_here">Delete from this relay</string>
-    <string name="relay_copy_other">Copy to another relay…</string>
+    <string name="relay_copy_other">Copy this item to another relay…</string>
     <string name="relay_copied_to">Copied to %1$s.</string>
     <string name="relay_copied_hint">To see its status here, add it in Settings → Relays.</string>
     <string name="relay_delete_title">Delete from %1$s?</string>
@@ -221,7 +221,23 @@
     <string name="ri_role">Role</string>
     <string name="ri_data">Your data</string>
     <string name="ri_latency">Response</string>
-    <string name="ri_sync_here">Copy here what is missing (%1$d)</string>
+    <string name="ri_copy_this">Copy this item here</string>
+    <string name="ri_pick">Choose what to copy here…</string>
+    <string name="pk_title">Copy to %1$s</string>
+    <string name="pk_mode_miss">Not up to date (%1$d)</string>
+    <string name="pk_mode_all">All (%1$d)</string>
+    <string name="pk_search">Search by name</string>
+    <string name="pk_select_missing">Choose all that is missing (%1$d)</string>
+    <string name="pk_clear">Clear selection</string>
+    <string name="pk_group_all">%1$d in total · %2$d not up to date</string>
+    <string name="pk_chosen">%1$d chosen</string>
+    <string name="pk_here">where you are</string>
+    <string name="pk_more">Show %1$d more</string>
+    <string name="pk_nothing">Nothing matches.</string>
+    <string name="pk_choose">Choose what to copy</string>
+    <string name="pk_go">Copy %1$d to %2$s</string>
+    <string name="pk_w_plain">Not encrypted: Tansu does not resend it</string>
+    <string name="pk_w_big">Too big for this relay (max %1$s)</string>
     <string name="ri_copy_url">Copy address</string>
     <string name="ri_remove_tansu">Remove from Tansu relays</string>
     <string name="ri_add_tansu">Add to Tansu relays</string>
@@ -287,6 +303,22 @@
     <plurals name="ri_synced_here">
         <item quantity="one">Copied %d item here.</item>
         <item quantity="other">Copied %d items here.</item>
+    </plurals>
+    <plurals name="ri_pick_sub">
+        <item quantity="one">%d item is not up to date on this relay</item>
+        <item quantity="other">%d items are not up to date on this relay</item>
+    </plurals>
+    <plurals name="pk_group_miss">
+        <item quantity="one">%d not up to date</item>
+        <item quantity="other">%d not up to date</item>
+    </plurals>
+    <plurals name="pk_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <plurals name="pk_events">
+        <item quantity="one">%d event</item>
+        <item quantity="other">%d events</item>
     </plurals>
     <plurals name="relays_count">
         <item quantity="one">%d Tansu relay</item>

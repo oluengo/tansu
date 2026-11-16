@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tansu · Elegir qué copiar a un relay (demo)</title>
+<style>
+:root{--bg:#F6F5F1;--card:#fff;--ink:#1D1F27;--muted:#6B7080;--line:#E7E6E1;--accent:#4C5FD5;--acc-soft:#E9ECF8;--lock:#B5651D;--lock-soft:#FFF4E6;--ok:#2E8A5A;--ok-soft:#E3F2EA;--danger:#C2413B;--danger-soft:#FBE9E8;--folder:#B07A4A;--folder-soft:#F5ECDF}
+*{box-sizing:border-box}body{margin:0;background:#E9E8E3;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:980px;margin:0 auto;padding:18px}
+h1{font-size:19px;margin:0 0 4px}.lead{color:var(--muted);margin:0 0 14px;font-size:14px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px}.tabs button.on{background:var(--acc-soft);border-color:var(--accent);color:var(--accent)}
+.stage{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:370px;height:760px;background:var(--bg);border-radius:30px;box-shadow:0 10px 40px rgba(0,0,0,.12);position:relative;overflow:hidden;flex:none}
+.scr{position:absolute;inset:0;overflow:auto;padding-bottom:30px}
+.top{display:flex;align-items:center;gap:10px;padding:16px 16px 8px}.top h2{font-size:19px;margin:0;flex:1}.ib{border:0;background:none;font-size:20px;padding:4px 6px}
+.group{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 12px}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:#EFEEEA;color:var(--muted);white-space:nowrap;display:inline-block}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-lock{background:var(--lock-soft);color:var(--lock)}.b-no{background:var(--danger-soft);color:var(--danger)}.b-acc{background:var(--acc-soft);color:var(--accent)}
+.mono{font-family:ui-monospace,Menlo,monospace}.small{font-size:12.5px}.muted{color:var(--muted)}
+.rrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line)}.rrow:first-of-type{border-top:0}.rrow .h{flex:1;min-width:0;font-size:13px;text-decoration:underline dotted var(--muted);text-underline-offset:3px;background:none;border:0;text-align:left;padding:0}
+.btn{display:block;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px;font-weight:600;font-size:14px;margin-top:8px;text-align:center}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}.btn:disabled{opacity:.45;cursor:default}
+.btn .sub{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:2px}.btn.p .sub{color:#DDE2FF}
+.shade{position:absolute;inset:0;background:rgba(20,22,30,.35);display:flex;align-items:flex-end}
+.sheet{background:var(--card);width:100%;max-height:92%;border-radius:22px 22px 0 0;display:flex;flex-direction:column}
+.sheet .body{overflow:auto;padding:16px 18px 10px}
+.sheet h3{margin:0;font-size:18px}
+.sec{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 6px}
+dl{display:grid;grid-template-columns:38% 62%;gap:5px 10px;margin:0;font-size:13px}dt{color:var(--muted)}dd{margin:0}
+.seg{display:flex;background:#EFEEEA;border-radius:10px;padding:3px;margin:10px 0}.seg button{flex:1;border:0;background:none;padding:7px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.search{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;font-size:14px;background:#fff}
+.fold{border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden}
+.fh{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FBFAF7}
+.fh .n{flex:1;min-width:0}.fh .n b{display:block;font-size:14px}.fh .n span{font-size:12px;color:var(--muted)}
+.fi{width:30px;height:30px;border-radius:9px;background:var(--folder-soft);color:var(--folder);display:grid;place-items:center;font-size:15px;flex:none}
+.chev{border:0;background:none;color:var(--muted);font-size:16px;padding:4px;transition:transform .15s}.chev.open{transform:rotate(90deg)}
+.cb{width:20px;height:20px;border-radius:6px;border:2px solid #B9BCC6;display:grid;place-items:center;flex:none;background:#fff;font-size:13px;color:#fff;line-height:1;padding:0}
+.cb.on{background:var(--accent);border-color:var(--accent)}.cb.mid{background:var(--accent);border-color:var(--accent)}.cb:disabled{opacity:.35}
+.it{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line)}
+.it .n{flex:1;min-width:0}.it .n b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.it .n span{font-size:11.5px;color:var(--muted)}
+.it.dis .n b{color:var(--muted)}.it .why{display:block;color:var(--lock)!important}
+.it.here{background:#F7F8FE}
+.more{display:block;width:100%;border:0;border-top:1px solid var(--line);background:none;padding:9px;color:var(--accent);font-weight:600;font-size:13px}
+.bar{border-top:1px solid var(--line);padding:10px 18px 16px;background:#fff}
+.bar .sum{font-size:12.5px;color:var(--muted);margin-bottom:2px}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;padding:4px 0}
+.notes{flex:1;min-width:280px;max-width:520px;font-size:14px}
+.notes .group{margin:0 0 12px}.notes h4{margin:0 0 6px;font-size:14px}.notes ul{margin:0;padding-left:18px}.notes li{margin:4px 0}
+.toast{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);background:#1D1F27;color:#fff;padding:10px 14px;border-radius:12px;font-size:13px;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tansu · Elegir qué copiar a un relay</h1>
+  <p class="lead">Demo interactiva. Toca los relays, las casillas y las carpetas. Datos de ejemplo: una cuenta con bastante contenido.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="stage">
+    <div class="phone"><div class="scr" id="scr"></div><div id="layer"></div><div id="toast"></div></div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+<script>
+// ---------- Datos de ejemplo ----------
+// st: estado del dato en nos.lol: ok (al día) | miss (no está) | old (versión antigua) | part (incompleta)
+const RELAY = "nos.lol", LIMIT = 65536;
+const D = [
+  { f: "Wavestr", items: [
+    { id: "wavestr/favorites", st: "miss", kb: 3.1 },
+    { id: "wavestr/settings", st: "ok", kb: 1.2 },
+    { id: "wavestr/history", st: "old", kb: 18.4, ago: "hace 9 d" },
+    { id: "wavestr/stations", st: "miss", kb: 42.0 },
+    { id: "wavestr/queue", st: "ok", kb: 0.8 },
+  ]},
+  { f: "Usus", items: [
+    { id: "usus/backup", st: "part", kb: 480, parts: 12, have: 8 },
+    { id: "usus/settings", st: "ok", kb: 0.9 },
+    { id: "usus/backup-2026-10", st: "miss", kb: 455, parts: 12 },
+    { id: "usus/backup-2026-09", st: "ok", kb: 430, parts: 11 },
+    { id: "usus/backup-2026-08", st: "miss", kb: 410, parts: 11 },
+    { id: "usus/backup-2026-07", st: "miss", kb: 395, parts: 10 },
+    { id: "usus/backup-2026-06", st: "ok", kb: 380, parts: 10 },
+    { id: "usus/backup-2026-05", st: "ok", kb: 362, parts: 10 },
+    { id: "usus/backup-2026-04", st: "miss", kb: 350, parts: 9 },
+    { id: "usus/backup-2026-03", st: "ok", kb: 340, parts: 9 },
+    { id: "usus/backup-2026-02", st: "ok", kb: 330, parts: 9 },
+    { id: "usus/backup-2026-01", st: "ok", kb: 322, parts: 9 },
+  ]},
+  { f: "Otras", items: [
+    { id: "otra/ajustes", st: "miss", kb: 0.4, plain: true },
+    { id: "lector/export", st: "miss", kb: 90, single: true },
+    { id: "notas/borradores", st: "ok", kb: 6.3 },
+  ]},
+  { f: "Listas (NIP-51)", list: true, items: [
+    { id: "Silenciados", st: "old", kb: 2.2, ago: "hace 3 d" },
+    { id: "Marcadores", st: "miss", kb: 5.0 },
+    { id: "Relays de búsqueda", st: "ok", kb: 0.3 },
+    { id: "Intereses", st: "ok", kb: 0.5 },
+  ]},
+];
+const ALL = D.flatMap(g => g.items.map(i => ({ ...i, g: g.f })));
+const needs = i => i.st !== "ok";
+// No se puede copiar: sin cifrar (nunca se reenvía) o un evento más grande que el límite del relay
+const blocked = i => i.plain ? "Sin cifrar: Tansu no lo reenvía" : i.single && i.kb * 1024 > LIMIT ? "Demasiado grande para este relay (máx. 64 kB por evento)" : null;
+const fmt = kb => kb < 1 ? Math.round(kb * 1024) + " B" : kb < 1000 ? (kb < 10 ? kb.toFixed(1) : Math.round(kb)) + " kB" : (kb / 1024).toFixed(1) + " MB";
+const events = i => (i.parts || 0) + 1;
+const stBadge = i => ({ ok: `<span class="badge b-ok">✓ al día</span>`, miss: `<span class="badge b-no">✕ no está</span>`,
+  old: `<span class="badge b-lock">antigua (${i.ago})</span>`, part: `<span class="badge b-lock">incompleta ${i.have}/${i.parts}</span>` }[i.st]);
+
+// ---------- Estado de la demo ----------
+let tab = "item", sel = new Set(), mode = "miss", q = "", open = new Set(), showAll = new Set(), sheet = null, from = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const TABS = [["item", "1 · Dentro de un dato (favorites)"], ["list", "2 · Desde «Todos los relays»"]];
+function setTab(t) { tab = t; sheet = null; sel = new Set(); q = ""; mode = "miss"; render(); }
+
+// ---------- Pantallas ----------
+function itemScreen() {
+  return `<div class="top"><button class="ib">←</button><h2>favorites</h2></div>
+  <div style="padding:0 16px"><span class="badge b-lock">NIP-44</span> <span class="badge">Wavestr</span> <span class="badge">3,1 kB</span></div>
+  <div class="group"><b>Relays</b>
+    ${[["relay.damus.io", "ok"], ["nos.lol", "miss"], ["relay.primal.net", "ok"]].map(([h, s]) => `<div class="rrow"><button class="h mono" data-a="ficha" data-x="${h}">${h}</button>${s === "ok" ? `<span class="badge b-ok">✓ al día</span>` : `<span class="badge b-no">✕ no está</span>`}<span class="muted">⋮</span></div>`).join("")}
+    <button class="btn">Copiar este dato a los que faltan (1)</button>
+    <button class="btn">Copiar este dato a otro relay…</button>
+    <p class="small muted" style="margin:8px 0 0">Se envía el mismo evento, ya firmado y cifrado. Solo este dato: para elegir otros, toca un relay.</p>
+  </div>`;
+}
+function listScreen() {
+  return `<div class="top"><button class="ib">←</button><h2>Todos los relays</h2></div>
+  ${[["relay.damus.io", "Damus", "24 al día · 0 antiguos · 0 faltan"], ["nos.lol", "nos.lol", "14 al día · 3 antiguos · 7 faltan"], ["relay.primal.net", "Primal", "24 al día · 0 antiguos · 0 faltan"]].map(([h, n, s]) =>
+    `<div class="group" data-a="ficha" data-x="${h}" style="cursor:pointer"><b>${n}</b><div class="mono small muted">${h}</div><div class="small" style="margin-top:6px">${s}</div></div>`).join("")}`;
+}
+function ficha() {
+  const miss = ALL.filter(needs).length;
+  const here = tab === "item";
+  return `<div class="shade" data-a="shade"><div class="sheet"><div class="body">
+    <h3>nos.lol</h3><div class="mono small muted">wss://nos.lol</div>
+    <div style="margin:8px 0"><span class="badge">120 ms</span> <span class="badge b-ok">gratis</span> <span class="badge">máx. 64 kB</span></div>
+    <div class="sec">Acceso · Límites · NIPs · Quién lo lleva</div><p class="small muted" style="margin:0">(igual que ahora)</p>
+    <div class="sec">En esta cuenta</div>
+    <dl><dt>Papel</dt><dd>tu relay (NIP-65)</dd><dt>Tus datos</dt><dd>14 al día · 3 antiguos · 7 faltan</dd></dl>
+    ${here ? `<button class="btn p" data-a="copyone">Copiar aquí este dato<span class="sub">favorites · 3,1 kB</span></button>` : ""}
+    <button class="btn ${here ? "" : "p"}" data-a="pick">Elegir qué copiar aquí…<span class="sub">${miss} datos no están al día en este relay</span></button>
+    <button class="btn">Copiar dirección</button>
+  </div></div></div>`;
+}
+function picker() {
+  const needle = q.trim().toLowerCase();
+  let total = 0;
+  const groups = D.map(g => {
+    const items = g.items.filter(i => (mode === "all" || needs(i)) && (!needle || i.id.toLowerCase().includes(needle)));
+    if (!items.length) return "";
+    const can = items.filter(i => !blocked(i)), on = can.filter(i => sel.has(i.id)).length;
+    const st = on === 0 ? "" : on === can.length ? "on" : "mid";
+    const isOpen = open.has(g.f) || !!needle;
+    const missN = g.items.filter(needs).length;
+    const limit = showAll.has(g.f) ? items.length : 6;
+    total += items.length;
+    return `<div class="fold">
+      <div class="fh"><button class="cb ${st}" data-a="gsel" data-x="${esc(g.f)}" ${can.length ? "" : "disabled"} aria-label="Seleccionar ${esc(g.f)}">${st === "on" ? "✓" : st === "mid" ? "–" : ""}</button>
+        <div class="n" data-a="fold" data-x="${esc(g.f)}" style="cursor:pointer"><b>${esc(g.f)}</b><span>${mode === "all" ? `${g.items.length} datos · ${missN} no al día` : `${items.length} no están al día`}${on ? ` · <b style="display:inline;color:var(--accent);font-size:12px">${on} elegidos</b>` : ""}</span></div>
+        <div class="fi">${g.list ? "☰" : "▤"}</div>
+        <button class="chev ${isOpen ? "open" : ""}" data-a="fold" data-x="${esc(g.f)}">›</button></div>
+      ${isOpen ? items.slice(0, limit).map(row).join("") + (items.length > limit ? `<button class="more" data-a="more" data-x="${esc(g.f)}">Ver ${items.length - limit} más</button>` : "") : ""}
+    </div>`;
+  }).join("");
+  const chosen = ALL.filter(i => sel.has(i.id));
+  const kb = chosen.reduce((a, i) => a + i.kb, 0), ev = chosen.reduce((a, i) => a + events(i), 0);
+  const missCan = ALL.filter(i => needs(i) && !blocked(i));
+  return `<div class="shade" data-a="shade"><div class="sheet" style="height:92%">
+    <div class="body" style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px"><button class="ib" data-a="back">←</button><h3 style="flex:1">Copiar a nos.lol</h3></div>
+      <div class="seg"><button class="${mode === "miss" ? "on" : ""}" data-a="mode" data-x="miss">No está al día (${ALL.filter(needs).length})</button><button class="${mode === "all" ? "on" : ""}" data-a="mode" data-x="all">Todo (${ALL.length})</button></div>
+      <input class="search" id="q" placeholder="Buscar por nombre" value="${esc(q)}">
+      <div style="display:flex;justify-content:space-between;margin-top:6px">
+        <button class="linkbtn" data-a="selall">Elegir todo lo que falta (${missCan.length})</button>
+        ${sel.size ? `<button class="linkbtn" data-a="none" style="color:var(--muted)">Quitar selección</button>` : ""}</div>
+      ${groups || `<p class="muted">Nada coincide.</p>`}
+    </div>
+    <div class="bar">
+      <div class="sum">${chosen.length ? `${chosen.length} ${chosen.length === 1 ? "dato" : "datos"} · ${ev} ${ev === 1 ? "evento" : "eventos"} · ${fmt(kb)}` : "Elige qué copiar"}</div>
+      <button class="btn p" data-a="go" ${chosen.length ? "" : "disabled"} style="margin-top:4px">Copiar ${chosen.length || ""} a nos.lol</button>
+    </div>
+  </div></div>`;
+}
+function row(i) {
+  const b = blocked(i), here = tab === "item" && i.id === "wavestr/favorites";
+  const meta = [i.parts ? `${i.parts} partes` : null, fmt(i.kb)].filter(Boolean).join(" · ");
+  return `<div class="it ${b ? "dis" : ""} ${here ? "here" : ""}" ${b ? "" : `data-a="sel" data-x="${esc(i.id)}" style="cursor:pointer"`}>
+    <button class="cb ${sel.has(i.id) ? "on" : ""}" ${b ? "disabled" : ""} tabindex="-1">${sel.has(i.id) ? "✓" : ""}</button>
+    <div class="n"><b>${esc(i.id)}${here ? ` <span class="badge b-acc" style="font-size:10px">donde estás</span>` : ""}</b><span>${meta}${b ? `<span class="why">⚠ ${esc(b)}</span>` : ""}</span></div>
+    ${stBadge(i)}</div>`;
+}
+
+// ---------- Notas ----------
+function notes() {
+  return `<div class="group"><h4>Qué cambia</h4><ul>
+    <li><b>Dentro de un dato</b>, la ficha del relay ofrece primero <b>«Copiar aquí este dato»</b>: solo lo que estás viendo.</li>
+    <li><b>«Elegir qué copiar aquí…»</b> abre un selector. Nunca se copia todo sin que lo elijas.</li>
+    <li>Entrando desde un dato, ese dato viene <b>ya marcado</b> y su carpeta abierta («donde estás»). Desde el listado de relays, no hay nada marcado.</li>
+    <li>Los botones del bloque Relays del dato dicen «este dato» para que quede claro que no copian nada más (ya era así).</li></ul></div>
+  <div class="group"><h4>Para mucho contenido</h4><ul>
+    <li>Por defecto solo se ve <b>lo que no está al día</b> en ese relay; «Todo» enseña también lo que ya está.</li>
+    <li>Agrupado por carpeta, <b>plegado</b> (salvo la tuya), con casilla por carpeta (todas / algunas / ninguna) y «Ver N más» a partir de 6.</li>
+    <li>Buscador por nombre; al buscar se abren las carpetas con resultados.</li>
+    <li>Una copia por partes (Usus) cuenta como <b>un solo dato</b>: «12 partes · 480 kB», y si está incompleta, «incompleta 8/12». Se envía entera.</li>
+    <li>Abajo, siempre visible: cuántos datos, eventos y tamaño vas a enviar.</li></ul></div>
+  <div class="group"><h4>Lo que no se puede elegir</h4><ul>
+    <li>Datos <b>sin cifrar</b>: Tansu nunca los reenvía.</li>
+    <li>Un evento <b>mayor que el límite</b> del relay (según su ficha): se avisa y no se marca.</li></ul></div>`;
+}
+
+// ---------- Render y acciones ----------
+function render() {
+  $("#tabs").innerHTML = TABS.map(([k, l]) => `<button class="${k === tab ? "on" : ""}" data-a="tab" data-x="${k}">${l}</button>`).join("");
+  $("#scr").innerHTML = tab === "item" ? itemScreen() : listScreen();
+  $("#layer").innerHTML = sheet === "ficha" ? ficha() : sheet === "pick" ? picker() : "";
+  $("#notes").innerHTML = notes();
+  const qi = $("#q"); if (qi && document.activeElement?.id !== "q" && from === "q") { qi.focus(); qi.setSelectionRange(q.length, q.length); }
+}
+function toast(t) { $("#toast").innerHTML = `<div class="toast">${esc(t)}</div>`; setTimeout(() => $("#toast").innerHTML = "", 2200); }
+const A = {
+  tab: x => setTab(x),
+  ficha: () => { sheet = "ficha"; render(); },
+  shade: (x, el, ev) => { if (ev.target === el) { sheet = null; render(); } },
+  copyone: () => { sheet = null; render(); toast("Copiado a nos.lol: favorites"); },
+  pick: () => { sheet = "pick"; mode = "miss"; q = ""; showAll = new Set(); sel = new Set(tab === "item" ? ["wavestr/favorites"] : []); open = new Set(tab === "item" ? ["Wavestr"] : []); render(); },
+  back: () => { sheet = "ficha"; render(); },
+  mode: x => { mode = x; render(); },
+  fold: x => { open.has(x) ? open.delete(x) : open.add(x); render(); },
+  more: x => { showAll.add(x); render(); },
+  sel: x => { sel.has(x) ? sel.delete(x) : sel.add(x); render(); },
+  gsel: x => {
+    const g = D.find(g => g.f === x), can = g.items.filter(i => (mode === "all" || needs(i)) && !blocked(i));
+    const allOn = can.every(i => sel.has(i.id));
+    can.forEach(i => allOn ? sel.delete(i.id) : sel.add(i.id)); open.add(x); render();
+  },
+  selall: () => { ALL.filter(i => needs(i) && !blocked(i)).forEach(i => sel.add(i.id)); render(); },
+  none: () => { sel = new Set(); render(); },
+  go: () => { const n = sel.size; sheet = null; sel = new Set(); render(); toast(`Copiados ${n} ${n === 1 ? "dato" : "datos"} a nos.lol`); },
+};
+document.addEventListener("click", ev => {
+  const el = ev.target.closest("[data-a]"); if (!el) return;
+  if (el.dataset.a !== "shade") ev.stopPropagation();
+  A[el.dataset.a]?.(el.dataset.x, el, ev);
+});
+document.addEventListener("input", ev => { if (ev.target.id === "q") { q = ev.target.value; from = "q"; render(); from = null; } });
+render();
+</script>
+</body>
+</html>
