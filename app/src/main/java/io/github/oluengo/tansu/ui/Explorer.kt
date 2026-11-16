@@ -39,6 +39,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -321,44 +323,117 @@ private fun copiesSummary(snap: Snapshot, events: List<Event>): Pair<Int, Int> {
     return c.count { it.state == RelayCopy.State.CURRENT } to c.count { it.state != RelayCopy.State.UNKNOWN }
 }
 
-/** En qué relays está una entrada o lista, y botón para copiarla a los que falta (mismo evento, sin firmar de nuevo). */
+/**
+ * En qué relays está una entrada o lista. Por relay: copiar aquí o borrar de este relay (NIP-09 solo a ese relay).
+ * Copiar a los que faltan o a otro relay reenvía el mismo evento, ya firmado y cifrado (no se firma nada nuevo).
+ */
 @Composable
-private fun RelayCopiesGroup(c: AppContainer, events: List<Event>) {
+private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String) {
     val st by c.explorer.state.collectAsStateWithLifecycle()
+    val acc by c.accounts.state.collectAsStateWithLifecycle()
     val snap = st.snapshot ?: return
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
+    var menuFor by remember { mutableStateOf<String?>(null) }
+    var askDelete by remember { mutableStateOf<String?>(null) }
+    var askOther by remember { mutableStateOf(false) }
     val copies = snap.copies(events)
+    val canSign = acc.current?.canSign == true
+
+    fun go(block: suspend () -> Unit) { busy = true; scope.launch { block(); busy = false } }
+    fun fail(t: Throwable) = Toast.makeText(ctx, errorText(ctx, t), Toast.LENGTH_LONG).show()
+    fun copyTo(relay: String) = go {
+        c.explorer.copyToRelay(events, relay)
+            .onSuccess { Toast.makeText(ctx, ctx.getString(R.string.relay_copied_to, relay.removePrefix("wss://")), Toast.LENGTH_SHORT).show() }
+            .onFailure(::fail)
+    }
+
     Group {
         Text(stringResource(R.string.relays_where), fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.size(4.dp))
         copies.forEach { cp ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(cp.relay.removePrefix("wss://"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                when (cp.state) {
-                    RelayCopy.State.CURRENT -> Badge("✓ " + stringResource(R.string.relay_current), Color(0xFF2E8A5A), Color(0x262E8A5A))
-                    RelayCopy.State.OLDER -> Badge(stringResource(R.string.relay_older, cp.olderAt?.let { ago(ctx, it) } ?: "?"), Ts.colors.lock, Ts.colors.lockSoft)
-                    RelayCopy.State.PARTIAL -> Badge(stringResource(R.string.relay_partial), Ts.colors.lock, Ts.colors.lockSoft)
-                    RelayCopy.State.MISSING -> Badge("✕ " + stringResource(R.string.relay_missing), Ts.colors.danger, Ts.colors.danger.copy(alpha = 0.12f))
-                    RelayCopy.State.UNKNOWN -> Badge(stringResource(R.string.relay_unknown))
+            val hasIt = cp.state == RelayCopy.State.CURRENT || cp.state == RelayCopy.State.OLDER || cp.state == RelayCopy.State.PARTIAL
+            val actions = cp.state != RelayCopy.State.UNKNOWN && (cp.needsSync || (hasIt && canSign))
+            Box {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = actions) { menuFor = cp.relay }.padding(vertical = 6.dp, horizontal = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(cp.relay.removePrefix("wss://"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    when (cp.state) {
+                        RelayCopy.State.CURRENT -> Badge("✓ " + stringResource(R.string.relay_current), Color(0xFF2E8A5A), Color(0x262E8A5A))
+                        RelayCopy.State.OLDER -> Badge(stringResource(R.string.relay_older, cp.olderAt?.let { ago(ctx, it) } ?: "?"), Ts.colors.lock, Ts.colors.lockSoft)
+                        RelayCopy.State.PARTIAL -> Badge(stringResource(R.string.relay_partial), Ts.colors.lock, Ts.colors.lockSoft)
+                        RelayCopy.State.MISSING -> Badge("✕ " + stringResource(R.string.relay_missing), Ts.colors.danger, Ts.colors.danger.copy(alpha = 0.12f))
+                        RelayCopy.State.UNKNOWN -> Badge(stringResource(R.string.relay_unknown))
+                    }
+                    if (actions) Text("⋮", color = Ts.colors.muted)
+                }
+                DropdownMenu(expanded = menuFor == cp.relay, onDismissRequest = { menuFor = null }) {
+                    if (cp.needsSync) DropdownMenuItem(text = { Text(stringResource(R.string.relay_copy_here)) }, onClick = { menuFor = null; copyTo(cp.relay) })
+                    if (hasIt && canSign) DropdownMenuItem(text = { Text(stringResource(R.string.relay_delete_here), color = Ts.colors.danger) }, onClick = { menuFor = null; askDelete = cp.relay })
                 }
             }
         }
         val missing = copies.count { it.needsSync }
-        if (missing > 0) {
-            OutlinedButton(enabled = !busy, onClick = {
-                busy = true
-                scope.launch {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+            if (missing > 0) OutlinedButton(enabled = !busy, onClick = {
+                go {
                     c.explorer.syncCopies(events)
                         .onSuccess { Toast.makeText(ctx, ctx.getString(R.string.relays_synced, it), Toast.LENGTH_SHORT).show() }
-                        .onFailure { Toast.makeText(ctx, errorText(ctx, it), Toast.LENGTH_LONG).show() }
-                    busy = false
+                        .onFailure(::fail)
                 }
-            }, modifier = Modifier.padding(top = 6.dp)) { Text(stringResource(R.string.relays_sync, missing)) }
-            Text(stringResource(R.string.relays_sync_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+            }) { Text(stringResource(R.string.relays_sync, missing)) }
+            TextButton(enabled = !busy, onClick = { askOther = true }) { Text(stringResource(R.string.relay_copy_other)) }
         }
+        Text(stringResource(R.string.relays_sync_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.relays_where_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+    }
+
+    askDelete?.let { relay ->
+        AlertDialog(
+            onDismissRequest = { askDelete = null },
+            title = { Text(stringResource(R.string.relay_delete_title, relay.removePrefix("wss://"))) },
+            text = { Text(stringResource(R.string.relay_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    askDelete = null
+                    go {
+                        c.explorer.deleteFromRelay(events, label, relay)
+                            .onSuccess { Toast.makeText(ctx, ctx.getString(R.string.relay_deleted, relay.removePrefix("wss://")), Toast.LENGTH_SHORT).show() }
+                            .onFailure(::fail)
+                    }
+                }) { Text(stringResource(R.string.delete), color = Ts.colors.danger) }
+            },
+            dismissButton = { TextButton(onClick = { askDelete = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+
+    if (askOther) {
+        var input by remember { mutableStateOf("") }
+        var invalid by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { askOther = false },
+            title = { Text(stringResource(R.string.relay_copy_other)) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = input, onValueChange = { input = it; invalid = false }, singleLine = true,
+                        placeholder = { Text("wss://relay.example.com") }, isError = invalid,
+                        supportingText = { Text(if (invalid) stringResource(R.string.relay_invalid) else stringResource(R.string.relay_copied_hint)) },
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val r = io.github.oluengo.tansu.nostr.RelayPool.normalize(input)
+                    if (r == null) invalid = true else { askOther = false; copyTo(r) }
+                }) { Text(stringResource(R.string.copy)) }
+            },
+            dismissButton = { TextButton(onClick = { askOther = false }) { Text(stringResource(R.string.cancel)) } },
+        )
     }
     if (busy) BusyDialog(c)
 }
@@ -491,7 +566,7 @@ private fun ListScreen(c: AppContainer, account: Account, e: Event) {
                 if (needsDecrypt) decrypt { startEdit(c.explorer.state.value.listPrivate[e.address].orEmpty()) } else startEdit(priv.orEmpty())
             }) { Text(stringResource(R.string.edit)) }
             Text(stringResource(R.string.lists_edit_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
-            RelayCopiesGroup(c, listOf(e))
+            RelayCopiesGroup(c, listOf(e), Lists.title(e) ?: "kind ${e.kind}")
         } else {
             Text(stringResource(R.string.lists_edit_rules), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
             listOf(false, true).forEach { isPriv ->
@@ -713,7 +788,7 @@ private fun ItemScreen(c: AppContainer, account: Account, e: Entry, go: (Route) 
             if (account.canSign) OutlinedButton(onClick = { askDelete = true }) { Text(stringResource(R.string.delete), color = Ts.colors.danger) }
         }
         if (enc != Encoding.NIP44 && enc != Encoding.EMPTY) Text(stringResource(R.string.edit_only_nip44), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
-        RelayCopiesGroup(c, e.events)
+        RelayCopiesGroup(c, e.events, e.d)
     }
 
     if (askDelete) AlertDialog(

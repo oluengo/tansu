@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 (beta)
+
+- Per relay: "Copy here" for a relay that lacks an item or has an older version, and "Delete from this relay" (a NIP-09 deletion request sent only to that relay; the others do not change; a copy goes to the trash first).
+- "Copy to another relay…": send an item, as it is (signed and encrypted), to any relay you type in, even one that is not in the account's list.
+
 ## 0.3.2 (beta)
 
 - Where each item lives: every file and list shows its state on each of the account's relays (up to date, older version, incomplete, not there, no answer), and the list warns when an item is not up to date everywhere (e.g. "1/2 relays").

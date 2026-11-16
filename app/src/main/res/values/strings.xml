@@ -166,6 +166,14 @@
     <string name="relays_synced">Copied to %1$d relays.</string>
     <string name="relays_badge">%1$d/%2$d relays</string>
     <string name="relays_where_note">Only your relays (NIP-65) and the Tansu ones are checked.</string>
+    <string name="relay_copy_here">Copy here</string>
+    <string name="relay_delete_here">Delete from this relay</string>
+    <string name="relay_copy_other">Copy to another relay…</string>
+    <string name="relay_copied_to">Copied to %1$s.</string>
+    <string name="relay_copied_hint">To see its status here, add it in Settings → Relays.</string>
+    <string name="relay_delete_title">Delete from %1$s?</string>
+    <string name="relay_delete_body">A deletion request (NIP-09) is sent only to this relay; the others do not change. A copy is kept in the trash first.</string>
+    <string name="relay_deleted">Deletion request sent to %1$s.</string>
     <string name="credits_title">Credits</string>
     <string name="credits_nostrich">Nostr icon: Purple Nostrich by SovrynMatt</string>
     <string name="credits_nostrich_sub">Free and open source; vectorized for the Tansu icon</string>
