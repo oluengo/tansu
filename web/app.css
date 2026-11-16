@@ -132,3 +132,4 @@ textarea.in{min-height:60vh;resize:vertical;font:12.5px/1.5 ui-monospace,Menlo,C
 
 .badge.ok-b{background:rgba(46,138,90,.14);color:#2E8A5A}
 .btn.t.danger{color:var(--danger)}
+.stack{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}

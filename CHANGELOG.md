@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4 (beta)
+
+- Relays block: "Copy to the ones missing it" and "Copy to another relay…" are now stacked, full width and with the same style.
+
 ## 0.3.3 (beta)
 
 - Per relay: "Copy here" for a relay that lacks an item or has an older version, and "Delete from this relay" (a NIP-09 deletion request sent only to that relay; the others do not change; a copy goes to the trash first).

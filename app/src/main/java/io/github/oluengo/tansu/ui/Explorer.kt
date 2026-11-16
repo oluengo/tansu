@@ -377,15 +377,16 @@ private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String
             }
         }
         val missing = copies.count { it.needsSync }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-            if (missing > 0) OutlinedButton(enabled = !busy, onClick = {
+        // Uno debajo del otro, mismo estilo y a todo el ancho
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)) {
+            if (missing > 0) OutlinedButton(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = {
                 go {
                     c.explorer.syncCopies(events)
                         .onSuccess { Toast.makeText(ctx, ctx.getString(R.string.relays_synced, it), Toast.LENGTH_SHORT).show() }
                         .onFailure(::fail)
                 }
             }) { Text(stringResource(R.string.relays_sync, missing)) }
-            TextButton(enabled = !busy, onClick = { askOther = true }) { Text(stringResource(R.string.relay_copy_other)) }
+            OutlinedButton(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = { askOther = true }) { Text(stringResource(R.string.relay_copy_other)) }
         }
         Text(stringResource(R.string.relays_sync_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.relays_where_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))

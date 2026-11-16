@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.3.3" + (BETA ? " beta" : "");
+const VERSION = "0.3.4" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -233,7 +233,7 @@ function relaysGroup(sn, events, key) {
   const acts = x => x.state === "unknown" ? "" : (needsSync(x) ? `<button class="btn t small" data-a="relaycopy" data-x='${J({ key, relay: x.relay })}'>${T("relay_copy_here")}</button>` : "")
     + (signer && ["current", "older", "partial"].includes(x.state) ? `<button class="btn t small danger" data-a="relaydelask" data-x='${J({ key, relay: x.relay })}'>${T("delete")}</button>` : "");
   return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><div class="v mono">${esc(x.relay.replace(/^wss:\/\//, ""))}</div>${lab(x)}${acts(x)}</div>`).join("")}
-    <div class="acts" style="margin:8px 0 0">${miss ? `<button class="btn" data-a="sync" data-x="${esc(key)}">${T("relays_sync", miss)}</button>` : ""}<button class="btn t" data-a="relayother" data-x="${esc(key)}">${T("relay_copy_other")}</button></div>
+    <div class="stack">${miss ? `<button class="btn block" data-a="sync" data-x="${esc(key)}">${T("relays_sync", miss)}</button>` : ""}<button class="btn block" data-a="relayother" data-x="${esc(key)}">${T("relay_copy_other")}</button></div>
     <p class="small muted">${T("relays_sync_note")} ${T("relays_where_note")}</p></div>`;
 }
 async function refresh() {
