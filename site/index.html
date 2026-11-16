@@ -75,6 +75,8 @@ code { font: .86em var(--mono); background: var(--accent-bg); padding: .1rem .35
 .mock .badge { font-size: .68rem; font-weight: 600; padding: .15rem .5rem; border-radius: 99px; background: light-dark(#FFF4E6, #33261A); color: light-dark(#B5651D, #F0A65A); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+.grid.feats { grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); }
+@media (min-width: 60rem) { .grid.feats { grid-template-columns: repeat(4, 1fr); } }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.3rem; }
 .card h3 { font-size: 1.08rem; margin: .7rem 0 .35rem; }
 .card p { margin: 0; color: var(--muted); font-size: .96rem; }
@@ -122,7 +124,7 @@ footer a { color: var(--muted); }
 			<p data-i="hero_text"></p>
 			<div class="cta">
 				<a class="btn p" href="app/" data-i="open_web"></a>
-				<a class="btn" href="https://github.com/oluengo/tansu/releases" data-i="get_android"></a>
+				<a class="btn" href="https://github.com/oluengo/tansu/releases/latest" data-i="get_android"></a>
 			</div>
 			<p class="small" style="margin-top:1rem" data-i="hero_note"></p>
 		</div>
@@ -140,13 +142,15 @@ footer a { color: var(--muted); }
 	<section id="features">
 		<h2 data-i="f_title"></h2>
 		<p class="lead" data-i="f_lead"></p>
-		<div class="grid">
+		<div class="grid feats">
 			<div class="card"><div class="ic">📁</div><h3 data-i="f1_t"></h3><p data-i="f1_p"></p></div>
 			<div class="card"><div class="ic">👥</div><h3 data-i="f2_t"></h3><p data-i="f2_p"></p></div>
 			<div class="card"><div class="ic">✏️</div><h3 data-i="f3_t"></h3><p data-i="f3_p"></p></div>
 			<div class="card"><div class="ic">↔</div><h3 data-i="f4_t"></h3><p data-i="f4_p"></p></div>
 			<div class="card"><div class="ic">🗑</div><h3 data-i="f5_t"></h3><p data-i="f5_p"></p></div>
 			<div class="card"><div class="ic">☰</div><h3 data-i="f6_t"></h3><p data-i="f6_p"></p></div>
+			<div class="card"><div class="ic">📡</div><h3 data-i="f7_t"></h3><p data-i="f7_p"></p></div>
+			<div class="card"><div class="ic">★</div><h3 data-i="f8_t"></h3><p data-i="f8_p"></p></div>
 		</div>
 	</section>
 
@@ -173,7 +177,7 @@ footer a { color: var(--muted); }
 			</div>
 			<div class="card">
 				<div class="ic">🤖</div><h3 data-i="g_and_t"></h3><p data-i="g_and_p" data-html></p>
-				<p style="margin-top:1rem"><a class="btn" href="https://github.com/oluengo/tansu/releases" data-i="get_android"></a></p>
+				<p style="margin-top:1rem"><a class="btn" href="https://github.com/oluengo/tansu/releases/latest" data-i="get_android"></a></p>
 				<p class="small" style="margin-top:.6rem"><a href="https://github.com/oluengo/tansu/releases/tag/tansu-beta" data-i="g_and_beta"></a></p>
 			</div>
 		</div>
@@ -235,6 +239,10 @@ const I = {
 	f5_p: { en: "Before deleting or overwriting, a local encrypted copy is kept so you can restore it." },
 	f6_t: { en: "Your lists (NIP-51)" },
 	f6_p: { en: "Muted, bookmarks, relays… including the private part. Anything new goes to the private, encrypted part." },
+	f7_t: { en: "Where your data lives" },
+	f7_p: { en: "See each item's state on every relay and copy it, already signed and encrypted, to the ones missing it. Or delete it from just one." },
+	f8_t: { en: "Relays you can trust" },
+	f8_p: { en: "Info sheets (NIP-11) and 1–5 stars from monitors, your own history and the people you follow. A relay that lost your data is flagged." },
 	p_title: { en: "Private by design" },
 	p1: { en: "Nothing readable is ever published: everything Tansu writes is encrypted (NIP-44) for your own account." },
 	p2: { en: "It never sees your nsec. Amber, a browser extension or a bunker sign and encrypt for it." },
