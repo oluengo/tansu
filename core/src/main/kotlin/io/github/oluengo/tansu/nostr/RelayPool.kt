@@ -37,8 +37,11 @@ class RelayPool(private val http: OkHttpClient) {
             .distinctBy { it.id }
     }
 
-    /** Lo que respondió un relay: [reached] = se pudo conectar. */
-    data class RelayResult(val url: String, val reached: Boolean, val events: List<Event>)
+    /** Lo que respondió un relay: [reached] = se pudo conectar; [ms] = lo que tardó en conectar. */
+    data class RelayResult(val url: String, val reached: Boolean, val events: List<Event>, val ms: Long? = null)
+
+    /** Último motivo de rechazo de cada relay al publicar (se borra cuando vuelve a aceptar). */
+    val rejections: MutableMap<String, String> = java.util.concurrent.ConcurrentHashMap()
 
     /** Como [query], pero relay a relay: para saber en cuáles está cada evento. */
     suspend fun queryEach(
@@ -55,6 +58,8 @@ class RelayPool(private val http: OkHttpClient) {
     private suspend fun queryOneResult(url: String, filters: List<Filter>, timeoutMs: Long): RelayResult =
         withContext(Dispatchers.IO) {
             val opened = java.util.concurrent.atomic.AtomicBoolean(false)
+            val t0 = System.nanoTime()
+            val openMs = java.util.concurrent.atomic.AtomicLong(-1)
             val events = Collections.synchronizedList(mutableListOf<Event>())
             val done = CompletableDeferred<Unit>()
             val subId = "rs" + UUID.randomUUID().toString().take(8)
@@ -66,6 +71,7 @@ class RelayPool(private val http: OkHttpClient) {
             val ws = http.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     opened.set(true)
+                    openMs.set((System.nanoTime() - t0) / 1_000_000)
                     webSocket.send(req)
                 }
 
@@ -95,7 +101,7 @@ class RelayPool(private val http: OkHttpClient) {
                 runCatching { ws.send(buildJsonArray { add("CLOSE"); add(subId) }.toString()) }
                 runCatching { ws.close(1000, null) }
             }
-            RelayResult(url, opened.get(), events.toList())
+            RelayResult(url, opened.get(), events.toList(), openMs.get().takeIf { it >= 0 })
         }
 
     /**
@@ -134,24 +140,42 @@ class RelayPool(private val http: OkHttpClient) {
         }
 
     /** Publica en cada relay y devuelve cuántos lo aceptaron (mensaje OK con true). */
-    suspend fun publish(relays: Collection<String>, event: Event, timeoutMs: Long = 8_000): Int = coroutineScope {
-        relays.distinct().map { url -> async(Dispatchers.IO) { publishOne(url, event, timeoutMs) } }.awaitAll().count { it }
+    suspend fun publish(relays: Collection<String>, event: Event, timeoutMs: Long = 8_000): Int =
+        publishDetailed(relays, event, timeoutMs).count { it.ok }
+
+    /** Resultado de publicar en un relay: [reason] = motivo del rechazo (mensaje OK del relay) o del fallo. */
+    data class PublishResult(val url: String, val ok: Boolean, val reason: String?)
+
+    suspend fun publishDetailed(relays: Collection<String>, event: Event, timeoutMs: Long = 8_000): List<PublishResult> = coroutineScope {
+        relays.distinct().map { url -> async(Dispatchers.IO) { publishOne(url, event, timeoutMs) } }.awaitAll().onEach {
+            if (it.ok) rejections.remove(it.url) else rejections[it.url] = it.reason ?: "sin respuesta"
+        }
     }
 
-    private suspend fun publishOne(url: String, event: Event, timeoutMs: Long): Boolean = withContext(Dispatchers.IO) {
-        val ok = CompletableDeferred<Boolean>()
+    private suspend fun publishOne(url: String, event: Event, timeoutMs: Long): PublishResult = withContext(Dispatchers.IO) {
+        val ok = CompletableDeferred<Pair<Boolean, String?>>()
         val msg = buildJsonArray { add("EVENT"); add(event.toJson()) }.toString()
         val ws = http.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) { webSocket.send(msg) }
             override fun onMessage(webSocket: WebSocket, text: String) {
                 val arr = runCatching { NostrJson.parseToJsonElement(text) as JsonArray }.getOrNull() ?: return
-                if ((arr.getOrNull(0) as? JsonPrimitive)?.contentOrNull == "OK" && (arr.getOrNull(1) as? JsonPrimitive)?.contentOrNull == event.id) {
-                    ok.complete((arr.getOrNull(2) as? JsonPrimitive)?.contentOrNull == "true")
+                val type = (arr.getOrNull(0) as? JsonPrimitive)?.contentOrNull
+                if (type == "OK" && (arr.getOrNull(1) as? JsonPrimitive)?.contentOrNull == event.id) {
+                    val accepted = (arr.getOrNull(2) as? JsonPrimitive)?.contentOrNull == "true"
+                    ok.complete(accepted to (arr.getOrNull(3) as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() })
+                } else if (type == "CLOSED" || type == "NOTICE") {
+                    // Algunos relays avisan así (p. ej. auth-required) antes del OK
+                    (arr.lastOrNull() as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }?.let { ok.complete(false to it) }
                 }
             }
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { ok.complete(false) }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                ok.complete(false to (response?.let { "HTTP ${it.code}" } ?: "sin conexión"))
+            }
         })
-        try { withTimeoutOrNull(timeoutMs) { ok.await() } ?: false } finally { runCatching { ws.close(1000, null) } }
+        try {
+            val (accepted, reason) = withTimeoutOrNull(timeoutMs) { ok.await() } ?: (false to "sin respuesta")
+            PublishResult(url, accepted, reason)
+        } finally { runCatching { ws.close(1000, null) } }
     }
 
     companion object {

@@ -53,6 +53,10 @@ const FAKE = `;(function(){
       }
       save(s); window.__published.push(e); return n;
     },
+    // Fichas NIP-11 de prueba: damus gratis y pequeño, nos.lol de pago y con login, primal sin ficha
+    relayInfo: async u => u === "wss://relay.damus.io" ? real.parseRelayInfo({ name: "Damus", supported_nips: [1, 9, 11, 42], software: "git+https://github.com/x/strfry", version: "1.0", limitation: { payment_required: false, max_content_length: 100 } })
+      : u === "wss://nos.lol" ? real.parseRelayInfo({ name: "nos.lol", pubkey: "bb".repeat(32), supported_nips: [1, 11], limitation: { payment_required: true, auth_required: true, max_message_length: 500000 }, fees: { admission: [{ amount: 21000, unit: "msats" }] }, payments_url: "https://nos.lol/pay" })
+      : null,
   });
 })();`;
 
@@ -107,7 +111,32 @@ try {
   await idle(page);
   ok(await page.evaluate(() => (JSON.parse(localStorage.getItem("__relays"))["wss://otro.example.com"] || []).some(e => (e.tags[0] || [])[1] === "wavestr/favorites")), "copiado a otro relay indicado a mano");
   await page.screenshot({ path: "/tmp/web-relays.png", fullPage: true });
+  // Fichas de relays (NIP-11): avisos en la entrada y ficha al tocar el relay
+  ok((await page.locator(".group", { hasText: "Relays" }).textContent()).includes("Demasiado pequeño para esta copia"), "aviso: damus demasiado pequeño para esta copia");
+  ok((await page.locator(".group", { hasText: "Relays" }).textContent()).includes("No anuncia borrados (NIP-09)"), "aviso: nos.lol no anuncia borrados");
+  await page.click(".rlink:text-is('relay.damus.io')");
+  await page.waitForSelector(".sheet h3:text-is('Damus')");
+  const sh = await page.locator(".sheet").textContent();
+  ok(sh.includes("gratis") && sh.includes("NIP-09") && sh.includes("strfry 1.0") && sh.includes("tu relay") === false, "ficha de damus: gratis, NIPs, software");
+  await page.screenshot({ path: "/tmp/web-ficha.png" });
+  await page.keyboard.press("Escape");
   await page.goBack(); await page.goBack();
+  // Listado completo de relays
+  await page.click("button:text('3 relays')");
+  await page.waitForSelector(".rcard");
+  ok(await page.locator(".rcard").count() === 3, "listado: los 3 relays");
+  await page.click(".chips.filters button:text('De pago')");
+  ok(await page.locator(".rcard").count() === 1 && (await page.locator(".rcard").textContent()).includes("nos.lol"), "filtro de pago: solo nos.lol");
+  await page.click(".rcard");
+  const sh2 = await page.locator(".sheet").textContent();
+  ok(sh2.includes("de pago") && sh2.includes("alta: 21 sats") && sh2.includes("Copiar aquí lo que falta (1)"), "ficha de nos.lol: pago, tarifa y copiar lo que falta");
+  await page.click(".sheet button:text('Copiar aquí lo que falta (1)')");
+  await idle(page); await page.waitForTimeout(300);
+  ok(await page.evaluate(() => (JSON.parse(localStorage.getItem("__relays"))["wss://nos.lol"] || []).some(e => (e.tags[0] || [])[1] === "wavestr/favorites")), "copiado a nos.lol lo que le faltaba");
+  await page.click(".chips.filters button:text('Sin respuesta')");
+  ok(await page.locator(".rcard").count() === 1 && (await page.locator(".rcard").textContent()).includes("primal"), "filtro sin respuesta: primal");
+  await page.screenshot({ path: "/tmp/web-relays-list.png", fullPage: true });
+  await page.goBack();
   await page.evaluate(() => { window.__published = []; });
 
   // Copia por partes de Usus: descifrar, ver, editar y guardar

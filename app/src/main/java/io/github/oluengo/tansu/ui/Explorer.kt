@@ -130,6 +130,7 @@ fun ExplorerScreen(
                 is Route.Item -> snap.entries.firstOrNull { it.d == route.d }?.let { ItemScreen(c, account, it, go, back) } ?: Gone()
                 is Route.Edit -> snap.entries.firstOrNull { it.d == route.d }?.let { EditScreen(c, it, back) } ?: Gone()
                 is Route.ListItem -> snap.lists.firstOrNull { it.address == route.address }?.let { ListScreen(c, account, it) } ?: Gone()
+                Route.Relays -> RelaysScreen(c, snap, st.refreshing)
                 Route.Settings -> Unit
             }
         }
@@ -175,6 +176,7 @@ private fun title(route: Route, snap: Snapshot?): String = when (route) {
     Route.Lists -> stringResource(R.string.folder_lists)
     is Route.Item -> snap?.entries?.firstOrNull { it.d == route.d }?.name ?: route.d
     is Route.Edit -> stringResource(R.string.edit)
+    Route.Relays -> stringResource(R.string.ri_all)
     is Route.ListItem -> snap?.lists?.firstOrNull { it.address == route.address }?.let { listTitle(it) } ?: ""
     else -> stringResource(R.string.app_name)
 }
@@ -250,10 +252,14 @@ private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Rout
                 ) { go(Route.Lists) }
             }
             item {
-                Text(
-                    stringResource(R.string.relays_used, snap.relays.size) + " · " + stringResource(R.string.privacy_short),
-                    color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(12.dp),
-                )
+                Row(Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.relays_used, snap.relays.size),
+                        color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { go(Route.Relays) },
+                    )
+                    Text(" · " + stringResource(R.string.privacy_short), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }
@@ -338,6 +344,7 @@ private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String
     var menuFor by remember { mutableStateOf<String?>(null) }
     var askDelete by remember { mutableStateOf<String?>(null) }
     var askOther by remember { mutableStateOf(false) }
+    var sheet by remember { mutableStateOf<String?>(null) }
     val copies = snap.copies(events)
     val canSign = acc.current?.canSign == true
 
@@ -357,7 +364,7 @@ private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String
             val actions = cp.state != RelayCopy.State.UNKNOWN && (cp.needsSync || (hasIt && canSign))
             Box {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = actions) { menuFor = cp.relay }.padding(vertical = 6.dp, horizontal = 2.dp),
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { sheet = cp.relay }.padding(start = 2.dp, top = 2.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(cp.relay.removePrefix("wss://"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -368,13 +375,15 @@ private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String
                         RelayCopy.State.MISSING -> Badge("✕ " + stringResource(R.string.relay_missing), Ts.colors.danger, Ts.colors.danger.copy(alpha = 0.12f))
                         RelayCopy.State.UNKNOWN -> Badge(stringResource(R.string.relay_unknown))
                     }
-                    if (actions) Text("⋮", color = Ts.colors.muted)
+                    if (actions) IconButton(onClick = { menuFor = cp.relay }, modifier = Modifier.size(36.dp)) { Text("⋮", color = Ts.colors.muted) }
+                    else Spacer(Modifier.size(36.dp))
                 }
                 DropdownMenu(expanded = menuFor == cp.relay, onDismissRequest = { menuFor = null }) {
                     if (cp.needsSync) DropdownMenuItem(text = { Text(stringResource(R.string.relay_copy_here)) }, onClick = { menuFor = null; copyTo(cp.relay) })
                     if (hasIt && canSign) DropdownMenuItem(text = { Text(stringResource(R.string.relay_delete_here), color = Ts.colors.danger) }, onClick = { menuFor = null; askDelete = cp.relay })
                 }
             }
+            WarningLines(relayWarnings(st.info[cp.relay], st.rejections[cp.relay], events))
         }
         val missing = copies.count { it.needsSync }
         // Uno debajo del otro, mismo estilo y a todo el ancho
@@ -436,6 +445,7 @@ private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String
             dismissButton = { TextButton(onClick = { askOther = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+    sheet?.let { RelayInfoSheet(c, it) { sheet = null } }
     if (busy) BusyDialog(c)
 }
 

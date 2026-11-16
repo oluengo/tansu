@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
  * y las operaciones (guardar, copiar a otra cuenta, borrar, restaurar). Todo lo que se publica va cifrado.
  */
 class Explorer(
+    private val infoClient: io.github.oluengo.tansu.nostr.RelayInfoClient,
+    private val pool: io.github.oluengo.tansu.nostr.RelayPool,
     private val accounts: AccountsRepository,
     private val signer: Signer,
     private val vault: Vault,
@@ -38,6 +40,10 @@ class Explorer(
         val opened: Map<String, Opened> = emptyMap(),
         /** Elementos privados de listas NIP-51 descifrados, por dirección. */
         val listPrivate: Map<String, List<List<String>>> = emptyMap(),
+        /** Fichas NIP-11 por relay (null = no publica ficha o no respondió). */
+        val info: Map<String, io.github.oluengo.tansu.nostr.RelayInfo?> = emptyMap(),
+        /** Último motivo de rechazo de cada relay. */
+        val rejections: Map<String, String> = emptyMap(),
     ) {
         val snapshot: Snapshot? get() = (load as? Load.Ready)?.snapshot
     }
@@ -51,6 +57,29 @@ class Explorer(
     val progress: StateFlow<Progress?> = _progress.asStateFlow()
 
     private val cache = HashMap<String, Snapshot>()
+    // HashMap sincronizado: un relay sin ficha se guarda como null (ConcurrentHashMap no admite null)
+    private val infoCache: MutableMap<String, io.github.oluengo.tansu.nostr.RelayInfo?> = java.util.Collections.synchronizedMap(HashMap())
+
+    /** Vuelve a leer la ficha de un relay (y recarga). */
+    fun reloadInfo(relay: String) { infoCache.remove(relay); refresh() }
+
+    /** Ficha de un relay que no es de la cuenta (p. ej. añadido a mano). */
+    suspend fun infoOf(relay: String): io.github.oluengo.tansu.nostr.RelayInfo? {
+        if (!infoCache.containsKey(relay)) infoCache[relay] = infoClient.fetch(relay)
+        _state.update { it.copy(info = synchronized(infoCache) { HashMap(infoCache) }) }
+        return infoCache[relay]
+    }
+
+    /** Copia a [relay] todo lo de la cuenta que no tiene o tiene anticuado. Devuelve cuántos datos. */
+    suspend fun syncRelay(relay: String): Result<Int> = attempt {
+        val snap = _state.value.snapshot ?: throw VaultException(VaultException.Reason.OFFLINE)
+        val todo = snap.missingAt(relay)
+        var n = 0
+        todo.forEachIndexed { i, ev -> _progress.value = Progress(i + 1, todo.size); if (runCatching { vault.copyTo(listOf(relay), ev) }.isSuccess) n++ }
+        if (todo.isNotEmpty() && n == 0) throw VaultException(VaultException.Reason.OFFLINE)
+        refresh()
+        n
+    }
     private var loadJob: Job? = null
 
     fun start() {
@@ -79,7 +108,13 @@ class Explorer(
                         else -> Load.Failed
                     },
                     refreshing = false,
+                    rejections = HashMap(pool.rejections),
                 )
+            }
+            // Fichas NIP-11 de los relays que aún no tenemos (se guardan mientras la app está abierta)
+            r?.relays?.filter { !infoCache.containsKey(it) }?.takeIf { it.isNotEmpty() }?.let { missing ->
+                infoCache.putAll(try { infoClient.fetchAll(missing) } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyMap() })
+                _state.update { it.copy(info = synchronized(infoCache) { HashMap(infoCache) }) }
             }
         }
     }

@@ -133,3 +133,11 @@ textarea.in{min-height:60vh;resize:vertical;font:12.5px/1.5 ui-monospace,Menlo,C
 .badge.ok-b{background:rgba(46,138,90,.14);color:#2E8A5A}
 .btn.t.danger{color:var(--danger)}
 .stack{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
+/* Fichas de relays */
+.rlink{background:none;border:0;padding:0;text-align:left;color:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline dotted var(--muted);text-underline-offset:3px}
+.warn{color:var(--lock);padding:0 0 6px 2px}
+.rcard{display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.rcard .rhead{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}.rcard .rhead .t{flex:1;min-width:0}
+.rcard .chips{margin-bottom:6px}
+.chips.filters{padding:0 6px 8px;flex-wrap:nowrap;overflow-x:auto}.chips.filters button{font-family:inherit;white-space:nowrap}
+.badge.acc{background:var(--accent-soft);color:var(--accent)}

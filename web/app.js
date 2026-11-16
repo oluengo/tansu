@@ -15,7 +15,7 @@ const LS = {
 };
 const BETA = location.pathname.includes("/beta/");
 const P = BETA ? "tansu-beta." : "tansu."; // los datos de la beta van aparte
-const VERSION = "0.3.4" + (BETA ? " beta" : "");
+const VERSION = "0.3.5" + (BETA ? " beta" : "");
 
 // ---------- Idioma ----------
 const LANGS = ["ca", "es", "en"];
@@ -60,7 +60,7 @@ const st = {
   active: LS.get(P + "active", null),
   settings: Object.assign({ theme: "system", accent: "indigo", relays: null }, LS.get(P + "settings", {})),
   profiles: LS.get(P + "profiles", {}),
-  snaps: {}, loading: false, failed: false,
+  snaps: {}, loading: false, failed: false, info: {},
   opened: {}, listPriv: {},
   route: [{ v: "home" }], q: "",
   busy: null, draft: null, edit: null, install: null,
@@ -182,14 +182,16 @@ function signerOf(a) {
 }
 
 // ---------- Relays y lectura ----------
-async function relaysFor(pk) {
+async function relaysFor(pk) { return [...new Set([...(await nip65(pk)).slice(0, 6), ...appRelays()])]; }
+/** Relays de la lista NIP-65 de la cuenta. */
+async function nip65(pk) {
   const ev = (await N.query([...INDEXERS, ...appRelays()], [{ kinds: [RELAY_LIST], authors: [pk], limit: 1 }], 5000))
     .filter(e => e.pubkey === pk).sort((a, b) => b.created_at - a.created_at)[0];
-  const own = (ev?.tags || []).filter(t => t[0] === "r" && t[1]).map(t => normRelay(t[1])).filter(Boolean).slice(0, 6);
-  return [...new Set([...own, ...appRelays()])];
+  return [...new Set((ev?.tags || []).filter(t => t[0] === "r" && t[1]).map(t => normRelay(t[1])).filter(Boolean))];
 }
 async function load(pk) {
-  const relays = await relaysFor(pk);
+  const own = await nip65(pk);
+  const relays = [...new Set([...own.slice(0, 6), ...appRelays()])];
   const res = await N.queryEach(relays, [
     { kinds: [APP_DATA], authors: [pk], limit: 500 },
     { kinds: Object.keys(LIST_KINDS).map(Number), authors: [pk], limit: 200 },
@@ -204,7 +206,8 @@ async function load(pk) {
   }
   const all = new Map(); for (const r of res) for (const e of r.events) if (good(e)) all.set(e.id, e);
   const evs = [...all.values()];
-  return { relays, entries: group(evs), lists: listsOf(evs), at: Date.now(), reached: new Set(res.filter(r => r.reached).map(r => r.url)), index };
+  return { relays, entries: group(evs), lists: listsOf(evs), at: Date.now(), reached: new Set(res.filter(r => r.reached).map(r => r.url)), index,
+    latency: Object.fromEntries(res.filter(r => r.ms != null).map(r => [r.url, r.ms])), own: new Set(own) };
 }
 /** Estado de unos eventos (entrada o lista) en cada relay: current | older | partial | missing | unknown. */
 function copiesOf(sn, events) {
@@ -222,6 +225,104 @@ function relaysBadge(sn, events) {
   const c = copiesOf(sn, events), cur = c.filter(x => x.state === "current").length, tot = c.filter(x => x.state !== "unknown").length;
   return cur < tot ? `<span class="badge lock">${T("relays_badge", cur, tot)}</span>` : "";
 }
+const host = r => r.replace(/^wss:\/\//, "");
+const paidOf = i => !!i && (i.payment === true || i.fees.length > 0);
+const delOf = i => i?.nips ? i.nips.includes(9) : null;
+/** Avisos de un relay; con [events], para esa entrada (tamaño). */
+function warnings(r, events) {
+  const i = st.info[r], out = [], rej = N.rejections[r];
+  const big = events ? Math.max(...events.map(e => e.content.length)) : null, lim = i?.maxContent ?? i?.maxMessage;
+  if (big != null && lim != null && big > lim) out.push(T("ri_w_small", size(lim)));
+  if (delOf(i) === false) out.push(T("ri_w_nodel"));
+  if (i?.auth === true) out.push(T("ri_w_auth"));
+  if (!events && paidOf(i)) out.push(T("ri_w_paid"));
+  if (rej) out.push(T("ri_w_reject", rej.slice(0, 120)));
+  return out;
+}
+/** (al día, antiguos o incompletos, faltan) de la cuenta en un relay; null si no respondió. */
+function statsOf(sn, r) {
+  if (!sn.reached.has(r)) return null;
+  const items = [...sn.entries.map(e => e.events), ...sn.lists.map(l => [l])];
+  const s = items.map(ev => copiesOf({ ...sn, relays: [r] }, ev)[0].state);
+  return [s.filter(x => x === "current").length, s.filter(x => x === "older" || x === "partial").length, s.filter(x => x === "missing").length];
+}
+function missingAt(sn, r) {
+  if (!sn.reached.has(r)) return [];
+  return [...sn.entries.map(e => e.events), ...sn.lists.map(l => [l])].filter(ev => needsSync(copiesOf({ ...sn, relays: [r] }, ev)[0]));
+}
+const roleOf = (sn, r) => sn?.own?.has(r) ? T("ri_role_nip65") : appRelays().includes(r) ? T("ri_role_tansu") : T("ri_role_other");
+function relayChips(r, sn) {
+  const i = st.info[r], inAcc = sn?.relays.includes(r), b = [];
+  if (inAcc && !sn.reached.has(r)) b.push(`<span class="badge plain">${T("relay_unknown")}</span>`);
+  if (sn?.latency?.[r] != null) b.push(`<span class="badge">${T("ri_ms", sn.latency[r])}</span>`);
+  if (i) {
+    if (paidOf(i)) b.push(`<span class="badge lock">${T("ri_paid")}</span>`); else if (i.payment === false) b.push(`<span class="badge ok-b">${T("ri_free")}</span>`);
+    if (i.auth) b.push(`<span class="badge lock">${T("ri_auth")}</span>`);
+    if (i.restricted) b.push(`<span class="badge lock">${T("ri_restricted")}</span>`);
+    if (delOf(i) === false) b.push(`<span class="badge lock">${T("ri_nodel")}</span>`);
+    const m = i.maxContent ?? i.maxMessage; if (m != null) b.push(`<span class="badge">${T("ri_max", size(m))}</span>`);
+  }
+  return `<div class="chips">${b.join("")}</div>`;
+}
+function feeText(f) {
+  const k = T(f.kind === "admission" ? "ri_fee_admission" : f.kind === "subscription" ? "ri_fee_subscription" : "ri_fee_publication");
+  const amt = f.unit === "msats" ? `${Math.floor(f.amount / 1000)} sats` : `${f.amount} ${f.unit}`;
+  return `${k}: ${amt}${f.period ? ` / ${Math.max(1, Math.round(f.period / 86400))} d` : ""}`;
+}
+/** Ficha del relay (NIP-11) + lo que sabemos de él en esta cuenta. */
+function relaySheet(r) {
+  const sn = snap(), known = r in st.info, i = st.info[r], inAcc = sn?.relays.includes(r), unk = T("ri_unknown");
+  const row = (k, v) => `<dt>${esc(k)}</dt><dd>${v}</dd>`;
+  const yn = b => b === true ? T("ri_required") : b === false ? T("ri_not_required") : unk;
+  const link = u => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a>`;
+  let h = `<h3>${esc(i?.name || host(r))}</h3><div class="mono small muted">${esc(r)}</div><div style="margin:8px 0">${relayChips(r, sn)}</div>`;
+  if (i?.description) h += `<p>${esc(i.description)}</p>`;
+  if (!known) h += `<p class="muted">${T("loading")}</p>`;
+  else if (!i) h += `<p class="muted">${T("ri_none")}</p>`;
+  if (inAcc && !sn.reached.has(r)) h += `<p class="err">${T("ri_down")}</p><button class="btn t" data-a="relayretry" data-x="${esc(r)}">${T("retry")}</button>`;
+  h += warnings(r).map(w => `<div class="warn small">⚠ ${esc(w)}</div>`).join("");
+  if (i) {
+    h += `<div class="sec">${T("ri_access")}</div><dl class="info">`
+      + row(T("ri_payment"), paidOf(i) ? T("ri_paid") : i.payment === false ? T("ri_free") : unk)
+      + (i.fees.length ? row(T("ri_fees"), i.fees.map(f => esc(feeText(f))).join("<br>")) : "")
+      + (i.payUrl ? row(T("ri_pay_link"), link(i.payUrl)) : "")
+      + row(T("ri_login"), yn(i.auth))
+      + row(T("ri_writes"), i.restricted === true ? T("ri_restricted") : i.restricted === false ? T("ri_writes_open") : unk)
+      + (i.pow ? row(T("ri_pow"), T("ri_pow_v", i.pow)) : "") + `</dl>`;
+    h += `<div class="sec">${T("ri_limits")}</div><dl class="info">`
+      + row(T("ri_max_msg"), i.maxMessage != null ? size(i.maxMessage) : unk)
+      + row(T("ri_max_content"), i.maxContent != null ? size(i.maxContent) : unk)
+      + (i.lower != null ? row(T("ri_oldest"), i.lower > 1e9 ? fullDate(i.lower) : T("ri_days", Math.round(i.lower / 86400))) : "") + `</dl>`;
+    if (i.nips) h += `<div class="sec">${T("ri_nips")}</div><div class="chips">${[...i.nips].sort((a, b) => a - b).map(n => `<span class="badge ${[9, 42, 44, 51, 65, 78].includes(n) ? "acc" : ""}">${[9, 42, 44, 51, 65, 78].includes(n) ? "NIP-" : ""}${String(n).padStart(2, "0")}</span>`).join("")}</div>`;
+    h += `<div class="sec">${T("ri_who")}</div><dl class="info">`
+      + (i.pubkey ? row(T("ri_operator"), `<button class="btn t small mono" data-a="copytext" data-x="${esc(N.npub(i.pubkey))}">${esc(shortNpub(i.pubkey))}</button>`) : "")
+      + (i.contact ? row(T("ri_contact"), esc(i.contact)) : "")
+      + (i.terms ? row(T("ri_terms"), link(i.terms)) : "")
+      + (i.software ? row(T("ri_software"), esc([i.software.split("/").pop(), i.version].filter(Boolean).join(" "))) : "") + `</dl>`;
+  }
+  if (inAcc) {
+    const s = statsOf(sn, r), todo = missingAt(sn, r).length;
+    h += `<div class="sec">${T("ri_account")}</div><dl class="info">` + row(T("ri_role"), roleOf(sn, r))
+      + (s ? row(T("ri_data"), T("ri_stats", ...s)) : "") + (sn.latency?.[r] != null ? row(T("ri_latency"), T("ri_ms", sn.latency[r])) : "") + `</dl>`;
+    if (todo) h += `<div class="stack"><button class="btn block" data-a="syncrelay" data-x="${esc(r)}">${T("ri_sync_here", todo)}</button></div>`;
+  }
+  const mine = appRelays();
+  h += `<div class="stack"><button class="btn block" data-a="copytext" data-x="${esc(r)}">${T("ri_copy_url")}</button>`
+    + (mine.includes(r) ? (mine.length > 1 ? `<button class="btn block danger" data-a="rmrelay" data-x="${esc(r)}">${T("ri_remove_tansu")}</button>` : "")
+      : `<button class="btn block" data-a="addrelayx" data-x="${esc(r)}">${T("ri_add_tansu")}</button>`) + `</div>`;
+  return h + `<p class="small muted">${T("ri_note")}</p>`;
+}
+function openRelay(r) { sheet(`<div id="ri">${relaySheet(r)}</div>`); if (!(r in st.info)) infoOf(r).then(() => { const el = $("#ri"); if (el) el.innerHTML = relaySheet(r); }); }
+const FILTERS = [["all", "ri_f_all"], ["paid", "ri_f_paid"], ["auth", "ri_f_auth"], ["nodel", "ri_f_nodel"], ["down", "ri_f_down"]];
+function relays(sn, r) {
+  const f = r.f || "all", all = [...new Set([...sn.relays, ...appRelays()])];
+  const shown = all.filter(u => { const i = st.info[u]; return f === "all" || (f === "paid" && paidOf(i)) || (f === "auth" && i?.auth === true) || (f === "nodel" && delOf(i) === false) || (f === "down" && sn.relays.includes(u) && !sn.reached.has(u)); });
+  let h = `<p class="small muted" style="padding:4px 10px">${T("ri_list_note")}</p><div class="chips filters">${FILTERS.map(([k, l]) => `<button class="${k === f ? "on" : ""}" data-a="rfilter" data-x="${k}">${T(l)}</button>`).join("")}</div>`;
+  if (!shown.length) h += `<p class="muted" style="padding:10px">${T("ri_empty_filter")}</p>`;
+  h += shown.map(u => { const i = st.info[u], s = statsOf(sn, u), rej = N.rejections[u];
+    return `<button class="group rcard" data-a="relayinfo" data-x="${esc(u)}"><div class="rhead"><span class="t"><b>${esc(i?.name || host(u))}</b>${i?.name && i.name !== host(u) ? `<div class="mono small muted">${esc(host(u))}</div>` : ""}</span><span class="small muted">${esc(roleOf(sn, u))}</span></div>${relayChips(u, sn)}${s ? `<div class="small">${T("ri_stats", ...s)}</div>` : ""}${rej ? `<div class="warn small">⚠ ${esc(T("ri_w_reject", rej.slice(0, 120)))}</div>` : ""}</button>`; }).join("");
+  return h + `<div class="stack" style="padding:0 4px"><button class="btn block" data-a="addrelaydlg">+ ${T("ri_add_relay")}</button></div>`;
+}
 function relaysGroup(sn, events, key) {
   const c = copiesOf(sn, events), miss = c.filter(needsSync).length;
   const lab = x => x.state === "current" ? `<span class="badge ok-b">✓ ${T("relay_current")}</span>`
@@ -232,7 +333,8 @@ function relaysGroup(sn, events, key) {
   const signer = canSign(acc());
   const acts = x => x.state === "unknown" ? "" : (needsSync(x) ? `<button class="btn t small" data-a="relaycopy" data-x='${J({ key, relay: x.relay })}'>${T("relay_copy_here")}</button>` : "")
     + (signer && ["current", "older", "partial"].includes(x.state) ? `<button class="btn t small danger" data-a="relaydelask" data-x='${J({ key, relay: x.relay })}'>${T("delete")}</button>` : "");
-  return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><div class="v mono">${esc(x.relay.replace(/^wss:\/\//, ""))}</div>${lab(x)}${acts(x)}</div>`).join("")}
+  const warn = x => warnings(x.relay, events).map(w => `<div class="warn small">⚠ ${esc(w)}</div>`).join("");
+  return `<div class="group"><b>${T("relays_where")}</b>${c.map(x => `<div class="tagrow"><button class="v mono rlink" data-a="relayinfo" data-x="${esc(x.relay)}">${esc(host(x.relay))}</button>${lab(x)}${acts(x)}</div>${warn(x)}`).join("")}
     <div class="stack">${miss ? `<button class="btn block" data-a="sync" data-x="${esc(key)}">${T("relays_sync", miss)}</button>` : ""}<button class="btn block" data-a="relayother" data-x="${esc(key)}">${T("relay_copy_other")}</button></div>
     <p class="small muted">${T("relays_sync_note")} ${T("relays_where_note")}</p></div>`;
 }
@@ -241,7 +343,12 @@ async function refresh() {
   st.loading = true; st.failed = false; render();
   try { st.snaps[a.pubkey] = await load(a.pubkey); } catch { if (!st.snaps[a.pubkey]) st.failed = true; }
   st.loading = false; render();
+  // Fichas NIP-11 que aún no tenemos (se guardan mientras la página está abierta)
+  const miss = (snap()?.relays || []).filter(r => !(r in st.info));
+  if (miss.length) await Promise.all(miss.map(async r => { st.info[r] = await N.relayInfo(r); }));
+  if (miss.length) render();
 }
+async function infoOf(r) { if (!(r in st.info)) { st.info[r] = await N.relayInfo(r); } return st.info[r]; }
 async function loadProfiles() {
   const miss = st.accounts.map(a => a.pubkey).filter(pk => !st.profiles[pk]);
   if (!miss.length) return;
@@ -389,6 +496,12 @@ const OPS = {
     await publishSigned(signerOf(a), sn.relays, { kind: DELETION, created_at: at, tags, content: "" });
     sn.entries = sn.entries.filter(x => x.d !== d); delete st.opened[okey(a.pubkey, d)];
     toast(T("deleted")); st.route.pop();
+  },
+  async syncRelay({ relay }) {
+    const todo = missingAt(snap(), relay); let n = 0;
+    for (const ev of todo) { if (ev.some(e => encoding(e.content) === "plain")) continue; let ok = true; for (const e of ev) if (await N.publish([relay], e) === 0) { ok = false; break; } if (ok) n++; }
+    if (todo.length && !n) throw new TErr("offline");
+    toast(TP("ri_synced_here", n)); await refresh();
   },
   async copyRelay({ key, relay }) {
     const events = eventsOf(key);
@@ -606,7 +719,7 @@ function render() {
   if (r.v === "settings") h += settings(r.sec);
   else if (!sn && st.failed) h += `<div class="center"><p class="muted">${T("load_failed")}</p><button class="btn" data-a="refresh">${T("retry")}</button></div>`;
   else if (!sn) h += `<div class="center"><div class="spin" style="margin:30px auto 12px"></div><p class="muted">${T("loading")}</p></div>`;
-  else h += ({ home, folder, lists, item, edit, list }[r.v] || home)(sn, r);
+  else h += ({ home, folder, lists, item, edit, list, relays }[r.v] || home)(sn, r);
   const focus = document.activeElement?.id, pos = document.activeElement?.selectionStart;
   app.innerHTML = h;
   if (focus) { const el = document.getElementById(focus); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch {} } }
@@ -633,6 +746,7 @@ function title(r) {
   if (r.v === "lists") return T("folder_lists");
   if (r.v === "item") return sn?.entries.find(e => e.d === r.d)?.name || r.d;
   if (r.v === "edit") return T("edit");
+  if (r.v === "relays") return T("ri_all");
   if (r.v === "list") { const e = sn?.lists.find(x => address(x) === r.addr); return e ? listTitle(e) : ""; }
   if (r.v === "settings") return r.sec ? T({ accounts: "accounts", appearance: "settings_appearance", relays: "settings_relays", trash: "trash", about: "settings_about" }[r.sec]) : T("settings");
   return "Tansu";
@@ -667,7 +781,7 @@ function home(sn) {
   if (!sn.entries.length) h += `<p class="muted" style="padding:0 10px">${T("apps_empty")}</p>`;
   for (const [app, l] of Object.entries(groups)) h += folderRow(appName(app), TP("items", l.length) + " · " + ago(Math.max(...l.map(x => x.updated))), { v: "folder", app });
   h += `<div class="sec">${T("drawer_lists")}</div>` + folderRow(T("folder_lists"), TP("items", sn.lists.length), { v: "lists" }, "☰");
-  h += `<p class="small muted" style="padding:14px 10px">${T("relays_used", sn.relays.length)} · ${T("privacy_short")} · <button class="btn t small" data-a="refresh">↻ ${T("retry")}</button></p>`;
+  h += `<p class="small muted" style="padding:14px 10px"><button class="btn t small" data-a="go" data-x='{"v":"relays"}'>${T("relays_used", sn.relays.length)}</button> · ${T("privacy_short")} · <button class="btn t small" data-a="refresh">↻ ${T("retry")}</button></p>`;
   return h;
 }
 const folder = (sn, r) => { const l = sn.entries.filter(e => e.app === r.app); return l.length ? l.map(e => entryRow(e)).join("") : `<p class="muted">${T("folder_empty")}</p>`; };
@@ -771,7 +885,7 @@ function settings(sec) {
   }
   if (sec === "relays") {
     const mine = appRelays(), sn = snap();
-    return `<div class="group"><b>${T("relays_app")}</b><p class="small muted">${T("relays_app_sub")}</p>${mine.map(u => `<div class="tagrow"><div class="v mono">${esc(u)}</div>${mine.length > 1 ? `<button class="icon-btn" data-a="rmrelay" data-x="${esc(u)}" aria-label="${esc(T("relay_remove", u))}">✕</button>` : ""}</div>`).join("")}
+    return `${sn ? `<div class="stack"><button class="btn block" data-a="go" data-x='{"v":"relays"}'>${T("ri_see_all")}</button></div>` : ""}<div class="group"><b>${T("relays_app")}</b><p class="small muted">${T("relays_app_sub")}</p>${mine.map(u => `<div class="tagrow"><div class="v mono">${esc(u)}</div>${mine.length > 1 ? `<button class="icon-btn" data-a="rmrelay" data-x="${esc(u)}" aria-label="${esc(T("relay_remove", u))}">✕</button>` : ""}</div>`).join("")}
       <div style="display:flex;gap:8px;margin-top:8px"><input id="relay-in" class="in mono" placeholder="wss://relay.example.com" autocapitalize="off"><button class="btn" data-a="addrelay">${T("add")}</button></div><div id="relay-err" class="err"></div>
       ${st.settings.relays ? `<button class="btn t" data-a="resetrelays">${T("relays_restore")}</button>` : ""}</div>
       ${sn ? `<div class="group"><b>${T("relays_account")}</b><p class="small muted">${T("relays_account_sub")}</p>${sn.relays.map(u => `<div class="mono small">${esc(u)}</div>`).join("")}</div>` : ""}`;
@@ -872,6 +986,17 @@ const ACT = {
   open(el) { run("open", { d: el.dataset.x }); },
   sync(el) { run("sync", { key: el.dataset.x }); },
   relaycopy(el) { run("copyRelay", JSON.parse(el.dataset.x)); },
+  relayinfo(el) { openRelay(el.dataset.x); },
+  relayretry(el) { delete st.info[el.dataset.x]; closeLayer(); refresh(); },
+  syncrelay(el) { const r = el.dataset.x; closeLayer(); run("syncRelay", { relay: r }); },
+  rfilter(el) { cur().f = el.dataset.x; render(); },
+  addrelayx(el) { const l = appRelays(); if (!l.includes(el.dataset.x)) st.settings.relays = [...l, el.dataset.x]; saveSettings(); closeLayer(); refresh(); },
+  addrelaydlg() {
+    dialog(`<h3>${T("ri_add_relay")}</h3><input id="addr-in" class="in mono" placeholder="wss://relay.example.com" autocapitalize="off"><div id="addr-err" class="err"></div>
+      <div class="acts"><button class="btn" data-a="close">${T("cancel")}</button><button class="btn p" data-a="addrelaygo">${T("ri_open")}</button></div>`);
+    $("#addr-in").focus();
+  },
+  addrelaygo() { const r = normRelay($("#addr-in").value); if (!r) { $("#addr-err").textContent = T("relay_invalid"); return; } openRelay(r); },
   relaydelask(el) {
     const o = JSON.parse(el.dataset.x), host = o.relay.replace(/^wss:\/\//, "");
     confirmDlg(T("relay_delete_title", host), T("relay_delete_body"), T("delete"), () => run("delRelay", o), true);
@@ -944,7 +1069,7 @@ const ACT = {
   accent(el) { st.settings.accent = el.dataset.x; saveSettings(); },
   lang(el) { const t = el.dataset.x || null; if (t) LS.set(P + "lang", t); else LS.del(P + "lang"); lang = pickLang(); render(); },
   addrelay() { const u = normRelay($("#relay-in").value); if (!u) { $("#relay-err").textContent = T("relay_invalid"); return; } const l = appRelays(); if (!l.includes(u)) st.settings.relays = [...l, u]; saveSettings(); refresh(); },
-  rmrelay(el) { st.settings.relays = appRelays().filter(u => u !== el.dataset.x); saveSettings(); refresh(); },
+  rmrelay(el) { st.settings.relays = appRelays().filter(u => u !== el.dataset.x); saveSettings(); closeLayer(); refresh(); },
   resetrelays() { st.settings.relays = null; saveSettings(); refresh(); },
   restoreask(el) { const t = trashCache.find(x => x.id === el.dataset.x); confirmDlg(T("restore_title", t.d), T("restore_body"), T("restore"), () => run("restore", { id: t.id }).then(render)); },
   async rmtrash(el) { await DB.del(el.dataset.x); await loadTrash(); render(); },
