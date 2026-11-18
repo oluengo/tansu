@@ -6,6 +6,13 @@
 
 <p align="center"><a href="https://oluengo.github.io/tansu/">Website</a> · <a href="https://oluengo.github.io/tansu/app/">Open the app</a> · <a href="https://github.com/oluengo/tansu/releases/latest">Download for Android</a> · <a href="https://zapstore.dev/apps/io.github.oluengo.tansu">Zapstore</a></p>
 
+<table><tr>
+<td width="25%"><img src="site/img/shots/01-home.jpg" alt="A folder per app"></td>
+<td width="25%"><img src="site/img/shots/02-relays-per-item.jpg" alt="Where each item lives"></td>
+<td width="25%"><img src="site/img/shots/03-visual.jpg" alt="Decrypted, in a visual view"></td>
+<td width="25%"><img src="site/img/shots/04-relay-list.jpg" alt="Relays you can trust"></td>
+</tr></table>
+
 **Tansu** is an explorer for what your Nostr apps keep in your account: backups and settings (NIP-78) and your lists (NIP-51). See it, edit it and move it between accounts, always encrypted. For Android and in the browser (PWA), with several accounts at once. Free, no ads. In Catalan, Spanish and English.
 
 ## What it does
