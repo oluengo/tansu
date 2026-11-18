@@ -4,7 +4,7 @@
 
 <p align="center"><b>Your private Nostr data, in folders.</b></p>
 
-<p align="center"><a href="https://oluengo.github.io/tansu/">Website</a> · <a href="https://oluengo.github.io/tansu/app/">Open the app</a> · <a href="https://github.com/oluengo/tansu/releases/latest">Download for Android</a></p>
+<p align="center"><a href="https://oluengo.github.io/tansu/">Website</a> · <a href="https://oluengo.github.io/tansu/app/">Open the app</a> · <a href="https://github.com/oluengo/tansu/releases/latest">Download for Android</a> · <a href="https://zapstore.dev/apps/io.github.oluengo.tansu">Zapstore</a></p>
 
 **Tansu** is an explorer for what your Nostr apps keep in your account: backups and settings (NIP-78) and your lists (NIP-51). See it, edit it and move it between accounts, always encrypted. For Android and in the browser (PWA), with several accounts at once. Free, no ads. In Catalan, Spanish and English.
 
@@ -25,7 +25,7 @@
 | | How |
 |---|---|
 | **Web and PWA** | Open <https://oluengo.github.io/tansu/app/> and, if you like, install it from the browser. Sign in with Amber (on Android), a NIP-07 extension, a bunker or your npub. |
-| **Android** | The APK from the [latest release](https://github.com/oluengo/tansu/releases/latest), or add `https://github.com/oluengo/tansu` to [Obtainium](https://github.com/ImranR98/Obtainium) to get updates. |
+| **Android** | From [Zapstore](https://zapstore.dev/apps/io.github.oluengo.tansu), the Nostr app store; or add `https://github.com/oluengo/tansu` to [Obtainium](https://github.com/ImranR98/Obtainium) to get updates from GitHub; or the APK from the [latest release](https://github.com/oluengo/tansu/releases/latest). |
 | **Beta** | Web: <https://oluengo.github.io/tansu/beta/>. Android: the [Tansu Beta](https://github.com/oluengo/tansu/releases/tag/tansu-beta) pre-release (in Obtainium, “include pre-releases”). Installs separately, with its own data. |
 
 APK certificate SHA-256 fingerprint (also in Settings → About): `E3:71:51:7A:B8:5F:4F:82:3C:D5:7D:79:9B:DF:11:72:E3:3D:C9:96:B2:FF:9D:4E:9B:F5:F6:BA:1E:D1:77:99`

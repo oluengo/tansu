@@ -98,6 +98,9 @@ footer a { color: var(--muted); }
 .chip:hover { border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); text-decoration: none; }
 
 .top nav .nl.more { display: inline-flex; white-space: nowrap; }
+.opts { margin: .6rem 0 0; padding-left: 1.2rem; }
+.opts li { margin: .35rem 0; }
+.acts { display: flex; flex-wrap: wrap; gap: .5rem; }
 </style>
 </head>
 <body>
@@ -124,7 +127,7 @@ footer a { color: var(--muted); }
 			<p data-i="hero_text"></p>
 			<div class="cta">
 				<a class="btn p" href="app/" data-i="open_web"></a>
-				<a class="btn" href="https://github.com/oluengo/tansu/releases/latest" data-i="get_android"></a>
+				<a class="btn" href="#get" data-i="get_android"></a>
 			</div>
 			<p class="small" style="margin-top:1rem" data-i="hero_note"></p>
 		</div>
@@ -171,14 +174,14 @@ footer a { color: var(--muted); }
 		<p class="lead" data-i="g_lead"></p>
 		<div class="grid">
 			<div class="card">
+				<div class="ic">🤖</div><h3 data-i="g_and_t"></h3><ol class="opts" data-i="g_and_p" data-html></ol>
+				<p style="margin-top:1rem" class="acts"><a class="btn p" href="https://zapstore.dev/apps/io.github.oluengo.tansu">Zapstore</a> <a class="btn" href="https://github.com/ImranR98/Obtainium">Obtainium</a> <a class="btn" href="https://github.com/oluengo/tansu/releases/latest" data-i="get_apk"></a></p>
+				<p class="small" style="margin-top:.6rem"><a href="https://github.com/oluengo/tansu/releases/tag/tansu-beta" data-i="g_and_beta"></a></p>
+			</div>
+			<div class="card">
 				<div class="ic">🌐</div><h3 data-i="g_web_t"></h3><p data-i="g_web_p"></p>
 				<p style="margin-top:1rem"><a class="btn p" href="app/" data-i="open_web"></a></p>
 				<p class="small" style="margin-top:.6rem"><a href="beta/" data-i="g_web_beta"></a></p>
-			</div>
-			<div class="card">
-				<div class="ic">🤖</div><h3 data-i="g_and_t"></h3><p data-i="g_and_p" data-html></p>
-				<p style="margin-top:1rem"><a class="btn" href="https://github.com/oluengo/tansu/releases/latest" data-i="get_android"></a></p>
-				<p class="small" style="margin-top:.6rem"><a href="https://github.com/oluengo/tansu/releases/tag/tansu-beta" data-i="g_and_beta"></a></p>
 			</div>
 		</div>
 		<h3 style="margin:2.2rem 0 .8rem" data-i="h_title"></h3>
@@ -216,7 +219,7 @@ const I = {
 	hero_title: { en: "Your private Nostr data, <span>in folders</span>" },
 	hero_text: { en: "Tansu is a file explorer for what your Nostr apps keep in your account: Wavestr favourites, Usus backups, settings and your lists. See it, edit it, move it between accounts. Always encrypted." },
 	open_web: { en: "Open in the browser" },
-	get_android: { en: "Android app" },
+	get_android: { en: "Get it on Android" },
 	hero_note: { en: "Built on Nostr · Free and open source · Android and web · English, Spanish, Catalan" },
 	m_apps: { en: "App data" },
 	m_wavestr: { en: "2 items · 5 min ago" },
@@ -249,12 +252,13 @@ const I = {
 	p3: { en: "Decrypted content only lives in memory while the app is open." },
 	p4: { en: "No servers of its own, no tracking: just your relays." },
 	g_title: { en: "Get Tansu" },
-	g_lead: { en: "The same app on Android and in the browser." },
+	g_lead: { en: "The same app on Android and in the browser. On Android, from Zapstore or GitHub, outside Google Play." },
 	g_web_t: { en: "Web" },
 	g_web_p: { en: "Nothing to install. Sign in with Amber (Android), a NIP-07 extension, a bunker or an npub. You can install it as an app (PWA) if you like." },
 	g_web_beta: { en: "Web beta →" },
 	g_and_t: { en: "Android" },
-	g_and_p: { en: "APK on GitHub. With <a href=\"https://github.com/ImranR98/Obtainium\">Obtainium</a> you get updates: add <code>github.com/oluengo/tansu</code>." },
+	g_and_p: { en: "<li><b>Zapstore</b>: install Tansu from the Nostr app store. Updates arrive there.</li><li><b>Obtainium</b>: add <code>github.com/oluengo/tansu</code> to get updates from GitHub.</li><li><b>APK</b>: download it from the latest release and open it. Allow installing from that source if Android asks.</li>" },
+	get_apk: { en: "Download APK" },
 	g_and_beta: { en: "Tansu Beta (pre-release) →" },
 	h_title: { en: "How it works" },
 	h1: { en: "Add your account with Amber, an extension, a bunker or just an npub (read only)." },
