@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package io.github.oluengo.tansu.ui
 
 import android.widget.Toast
@@ -30,6 +32,11 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.TriStateCheckbox
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
@@ -58,6 +65,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -116,17 +124,29 @@ fun ExplorerScreen(
     val acc by c.accounts.state.collectAsStateWithLifecycle()
     val profiles by c.profiles.state.collectAsStateWithLifecycle()
     val account = acc.current ?: return
+    var selecting by rememberSaveable { mutableStateOf(false) }
+    var selKeys by rememberSaveable { mutableStateOf(listOf<String>()) }
+    LaunchedEffect(account.pubkey) { selecting = false; selKeys = emptyList() }
+    val sel = Selection(selecting, selKeys.toSet()) { on, k -> selecting = on; selKeys = k.toList() }
+    val selRoute = route == Route.Home || route is Route.Folder || route == Route.Lists
+    androidx.activity.compose.BackHandler(enabled = selecting && route == Route.Home) { sel.exit() }
 
     Column(Modifier.fillMaxSize()) {
-        TopBar(route, account, profiles[account.pubkey], st.snapshot, back, onAccounts, onSettings)
         val snap = st.snapshot
+        if (selecting && selRoute && snap != null) SelectionTopBar(sel, when (route) {
+            is Route.Folder -> snap.entries.filter { it.app == route.app }.map { entryKey(it.d) }
+            Route.Lists -> snap.lists.map { listKey(it.address) }
+            else -> null
+        })
+        else TopBar(route, account, profiles[account.pubkey], st.snapshot, back, onAccounts, onSettings, onSelect = if (selRoute && snap != null) ({ sel.start(emptyList()) }) else null)
+        Box(Modifier.weight(1f)) {
         when {
             snap == null && st.load is Explorer.Load.Failed -> Failed { c.explorer.refresh() }
             snap == null -> Loading()
             else -> when (route) {
-                Route.Home -> Home(c, snap, st.refreshing, go)
-                is Route.Folder -> Folder(c, snap, route.app, st.refreshing, go)
-                Route.Lists -> ListsFolder(c, snap, st.refreshing, go)
+                Route.Home -> Home(c, snap, st.refreshing, go, sel)
+                is Route.Folder -> Folder(c, snap, route.app, st.refreshing, go, sel)
+                Route.Lists -> ListsFolder(c, snap, st.refreshing, go, sel)
                 is Route.Item -> snap.entries.firstOrNull { it.d == route.d }?.let { ItemScreen(c, account, it, go, back) } ?: Gone()
                 is Route.Edit -> snap.entries.firstOrNull { it.d == route.d }?.let { EditScreen(c, it, back) } ?: Gone()
                 is Route.ListItem -> snap.lists.firstOrNull { it.address == route.address }?.let { ListScreen(c, account, it) } ?: Gone()
@@ -134,6 +154,8 @@ fun ExplorerScreen(
                 Route.Settings -> Unit
             }
         }
+        }
+        if (selecting && selRoute && snap != null) GroupActionBar(c, account, snap, sel)
     }
 }
 
@@ -142,7 +164,7 @@ fun ExplorerScreen(
 @Composable
 private fun TopBar(
     route: Route, account: Account, profile: io.github.oluengo.tansu.data.Profile?, snap: Snapshot?,
-    back: () -> Unit, onAccounts: () -> Unit, onSettings: () -> Unit,
+    back: () -> Unit, onAccounts: () -> Unit, onSettings: () -> Unit, onSelect: (() -> Unit)? = null,
 ) {
     Row(
         Modifier.fillMaxWidth().padding(start = if (route == Route.Home) 16.dp else 4.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
@@ -156,6 +178,7 @@ private fun TopBar(
             IconButton(onClick = back) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back)) }
             Text(title(route, snap), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         }
+        if (onSelect != null) IconButton(onClick = onSelect) { Icon(Icons.Outlined.Checklist, stringResource(R.string.sel_start)) }
         Row(
             Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onAccounts).padding(4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -209,7 +232,7 @@ private fun Gone() { EmptyNote(stringResource(R.string.item_gone), Modifier.padd
 // ---------- Inicio: cajones ----------
 
 @Composable
-private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Route) -> Unit) {
+private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Route) -> Unit, sel: Selection) {
     var q by rememberSaveable { mutableStateOf("") }
     val ctx = LocalContext.current
     val groups = snap.entries.groupBy { it.app }
@@ -230,8 +253,8 @@ private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Rout
                 val es = snap.entries.filter { needle in it.d.lowercase() }
                 val ls = snap.lists.filter { needle in (listTitle(it, ctx) + " " + it.kind).lowercase() }
                 item { Section(ctx.resources.getQuantityString(R.plurals.results, es.size + ls.size, es.size + ls.size)) }
-                items(es, key = { "e:" + it.d }) { EntryRow(it, showApp = true, copies = copiesSummary(snap, it.events)) { go(Route.Item(it.d)) } }
-                items(ls, key = { "l:" + it.address }) { ListRow(it) { go(Route.ListItem(it.address)) } }
+                items(es, key = { "e:" + it.d }) { EntryRow(it, showApp = true, copies = copiesSummary(snap, it.events), sel = sel) { go(Route.Item(it.d)) } }
+                items(ls, key = { "l:" + it.address }) { ListRow(it, sel) { go(Route.ListItem(it.address)) } }
                 if (es.isEmpty() && ls.isEmpty()) item { EmptyNote(stringResource(R.string.search_none), Modifier.padding(horizontal = 12.dp)) }
                 return@LazyColumn
             }
@@ -239,7 +262,8 @@ private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Rout
             if (groups.isEmpty()) item { EmptyNote(stringResource(R.string.apps_empty), Modifier.padding(horizontal = 12.dp)) }
             items(groups.keys.toList(), key = { "f:$it" }) { app ->
                 val list = groups.getValue(app)
-                FolderRow(appName(app), ctx.resources.getQuantityString(R.plurals.items, list.size, list.size) + " · " + ago(ctx, list.maxOf { it.updatedAt }), Icons.Outlined.Folder) {
+                FolderRow(appName(app), ctx.resources.getQuantityString(R.plurals.items, list.size, list.size) + " · " + ago(ctx, list.maxOf { it.updatedAt }), Icons.Outlined.Folder,
+                    sel = sel, keys = list.map { entryKey(it.d) }) {
                     go(Route.Folder(app))
                 }
             }
@@ -249,8 +273,10 @@ private fun Home(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Rout
                     stringResource(R.string.folder_lists),
                     ctx.resources.getQuantityString(R.plurals.items, snap.lists.size, snap.lists.size),
                     Icons.AutoMirrored.Outlined.List,
+                    sel = sel, keys = snap.lists.map { listKey(it.address) },
                 ) { go(Route.Lists) }
             }
+            if (sel.active) item { Text(stringResource(R.string.sel_hint_home), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) }
             item {
                 Row(Modifier.padding(12.dp)) {
                     Text(
@@ -279,17 +305,31 @@ private fun RowIcon(icon: ImageVector, folder: Boolean) {
 }
 
 @Composable
-private fun FolderRow(name: String, meta: String, icon: ImageVector, onClick: () -> Unit) {
+private fun FolderRow(name: String, meta: String, icon: ImageVector, sel: Selection? = null, keys: List<String> = emptyList(), onClick: () -> Unit) {
+    val on = if (sel == null) 0 else keys.count { it in sel }
+    val state = when { on == 0 -> ToggleableState.Off; on == keys.size -> ToggleableState.On; else -> ToggleableState.Indeterminate }
+    val selecting = sel?.active == true
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(if (on > 0) Ts.colors.accentSoft else Color.Transparent)
+            .combinedClickable(
+                onClick = { if (selecting && keys.isNotEmpty()) sel!!.toggle(keys) else onClick() },
+                onLongClick = if (sel != null && keys.isNotEmpty()) ({ sel.start(keys) }) else null,
+            ).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (selecting) TriStateCheckbox(state = state, onClick = null, enabled = keys.isNotEmpty())
         RowIcon(icon, folder = true)
         Column(Modifier.weight(1f)) {
             Text(name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(meta, color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                meta + if (on > 0) " · " + stringResource(R.string.pk_chosen, on) else "",
+                color = if (on > 0) MaterialTheme.colorScheme.primary else Ts.colors.muted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
         }
-        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = Ts.colors.muted)
+        // En modo selección, entrar en la carpeta para elegir algunos
+        if (selecting) IconButton(onClick = onClick) { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, name, tint = Ts.colors.muted) }
+        else Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = Ts.colors.muted)
     }
 }
 
@@ -304,13 +344,21 @@ private fun EncodingBadge(enc: Encoding) {
 }
 
 @Composable
-private fun EntryRow(e: Entry, showApp: Boolean = false, copies: Pair<Int, Int>? = null, onClick: () -> Unit) {
+private fun EntryRow(e: Entry, showApp: Boolean = false, copies: Pair<Int, Int>? = null, sel: Selection? = null, onClick: () -> Unit) {
     val ctx = LocalContext.current
     val enc = e.encoding
+    val key = entryKey(e.d)
+    val on = sel != null && key in sel
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(if (on) Ts.colors.accentSoft else Color.Transparent)
+            .combinedClickable(
+                onClick = { if (sel?.active == true) sel.toggle(listOf(key)) else onClick() },
+                onLongClick = sel?.let { s -> { s.start(listOf(key)) } },
+            ).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (sel?.active == true) Checkbox(checked = on, onCheckedChange = null)
         RowIcon(if (enc == Encoding.NIP44 || enc == Encoding.NIP04) Icons.Outlined.Lock else Icons.Outlined.Description, folder = false)
         Column(Modifier.weight(1f)) {
             Text(if (showApp) e.d else e.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -452,12 +500,12 @@ private fun RelayCopiesGroup(c: AppContainer, events: List<Event>, label: String
 // ---------- Carpeta de una app ----------
 
 @Composable
-private fun Folder(c: AppContainer, snap: Snapshot, app: String, refreshing: Boolean, go: (Route) -> Unit) {
+private fun Folder(c: AppContainer, snap: Snapshot, app: String, refreshing: Boolean, go: (Route) -> Unit, sel: Selection) {
     val list = snap.entries.filter { it.app == app }
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { c.explorer.refresh() }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
             if (list.isEmpty()) item { EmptyNote(stringResource(R.string.folder_empty), Modifier.padding(horizontal = 12.dp)) }
-            items(list, key = { it.d }) { e -> EntryRow(e, copies = copiesSummary(snap, e.events)) { go(Route.Item(e.d)) } }
+            items(list, key = { it.d }) { e -> EntryRow(e, copies = copiesSummary(snap, e.events), sel = sel) { go(Route.Item(e.d)) } }
         }
     }
 }
@@ -476,12 +524,20 @@ internal fun listTitle(e: Event, ctx: android.content.Context): String {
 private fun listTitle(e: Event): String = listTitle(e, LocalContext.current)
 
 @Composable
-private fun ListRow(e: Event, onClick: () -> Unit) {
+private fun ListRow(e: Event, sel: Selection? = null, onClick: () -> Unit) {
     val ctx = LocalContext.current
+    val key = listKey(e.address)
+    val on = sel != null && key in sel
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(if (on) Ts.colors.accentSoft else Color.Transparent)
+            .combinedClickable(
+                onClick = { if (sel?.active == true) sel.toggle(listOf(key)) else onClick() },
+                onLongClick = sel?.let { s -> { s.start(listOf(key)) } },
+            ).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (sel?.active == true) Checkbox(checked = on, onCheckedChange = null)
         RowIcon(Icons.AutoMirrored.Outlined.List, folder = false)
         Column(Modifier.weight(1f)) {
             Text(listTitle(e), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -495,12 +551,12 @@ private fun ListRow(e: Event, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ListsFolder(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Route) -> Unit) {
+private fun ListsFolder(c: AppContainer, snap: Snapshot, refreshing: Boolean, go: (Route) -> Unit, sel: Selection) {
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { c.explorer.refresh() }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
             item { Text(stringResource(R.string.lists_note), color = Ts.colors.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) }
             if (snap.lists.isEmpty()) item { EmptyNote(stringResource(R.string.lists_empty), Modifier.padding(horizontal = 12.dp)) }
-            items(snap.lists, key = { it.address }) { e -> ListRow(e) { go(Route.ListItem(e.address)) } }
+            items(snap.lists, key = { it.address }) { e -> ListRow(e, sel) { go(Route.ListItem(e.address)) } }
         }
     }
 }
