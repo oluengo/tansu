@@ -137,7 +137,7 @@ fun ExplorerScreen(
             is Route.Folder -> snap.entries.filter { it.app == route.app }.map { entryKey(it.d) }
             Route.Lists -> snap.lists.map { listKey(it.address) }
             else -> null
-        })
+        }, onBack = if (route == Route.Home) null else back)
         else TopBar(route, account, profiles[account.pubkey], st.snapshot, back, onAccounts, onSettings, onSelect = if (selRoute && snap != null) ({ sel.start(emptyList()) }) else null)
         Box(Modifier.weight(1f)) {
         when {

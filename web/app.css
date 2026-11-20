@@ -172,3 +172,17 @@ textarea.in{min-height:60vh;resize:vertical;font:12.5px/1.5 ui-monospace,Menlo,C
 .sig .bar{height:5px;border-radius:3px;background:var(--soft);margin-top:6px;overflow:hidden}.sig .bar i{display:block;height:100%;background:#E9A23B}
 .how{margin-top:6px;font-size:12.5px}.how summary{cursor:pointer;color:var(--accent);font-weight:600}
 .how table{width:100%;border-collapse:collapse;margin-top:6px}.how td{padding:4px 0;border-top:1px solid var(--line)}.how td:last-child{text-align:right}
+/* Selección y operaciones en grupo */
+.top.selbar{background:var(--accent-soft)}.top.selbar h1{color:var(--accent);flex:1}
+.row.sel{background:var(--accent-soft)}
+div.row{display:flex;align-items:center;padding:0}div.row .rowmain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;padding:10px;text-align:left}
+div.row .chev{padding:10px 14px;font-size:20px}
+.row .cb{margin-right:2px}
+.gbar{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--card);border-top:1px solid var(--line);padding:8px 8px calc(10px + env(safe-area-inset-bottom));margin:12px -12px 0;z-index:3}
+.gbar button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;font-weight:600;padding:6px 2px;border-radius:10px}
+.gbar button .i{font-size:19px;line-height:1}.gbar button:disabled{opacity:.35}.gbar button.d{color:var(--danger)}
+.grows{margin-top:10px}.grow{display:flex;align-items:center;gap:10px;width:100%;padding:10px 4px;border-top:1px solid var(--line);text-align:left}
+.grow:first-child{border-top:0}.grow .t{flex:1;min-width:0}.grow .n{font-weight:600;font-size:14px}.grow .m{font-size:12px;color:var(--muted)}.grow:disabled{opacity:.5}
+.gwarn{background:var(--lock-soft);color:var(--lock);border-radius:12px;padding:10px 12px;font-size:12.5px;margin-top:10px}.gwarn.d{background:var(--danger-soft,#FBE9E8);color:var(--danger)}
+.gres div{padding:4px 0;font-size:14px}.gres .warn{color:var(--lock)}
+.btn.dfill{background:var(--danger);border-color:var(--danger);color:#fff}

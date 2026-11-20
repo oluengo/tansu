@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudUpload
@@ -94,12 +95,13 @@ internal fun picksOf(snap: Snapshot, keys: Set<String>, ctx: android.content.Con
         snap.lists.filter { listKey(it.address) in keys }.map { Explorer.Pick(listKey(it.address), listTitle(it, ctx), listOf(it)) }
 
 @Composable
-internal fun SelectionTopBar(sel: Selection, folderKeys: List<String>?) {
+internal fun SelectionTopBar(sel: Selection, folderKeys: List<String>?, onBack: (() -> Unit)?) {
     val ctx = LocalContext.current
     Row(
         Modifier.fillMaxWidth().background(Ts.colors.accentSoft).padding(start = 4.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back)) }
         IconButton(onClick = sel::exit) { Icon(Icons.Outlined.Close, stringResource(R.string.sel_exit)) }
         Text(
             ctx.resources.getQuantityString(R.plurals.sel_count, sel.keys.size, sel.keys.size),
@@ -297,7 +299,7 @@ private fun GroupRelaysSheet(
     val counts = remember(st, picks, relays) { relays.associateWith(::count) }
     val ratings = remember(st, relays) { relays.associateWith { c.explorer.rating(it)?.stars } }
     var chosen by remember {
-        mutableStateOf(preset ?: if (delete) emptySet() else relays.filter { (counts[it] ?: 0) > 0 && (ratings[it] ?: 3) >= 3 }.toSet())
+        mutableStateOf(preset ?: if (delete) emptySet() else relays.filter { it in snap.reached && (counts[it] ?: 0) > 0 && (ratings[it] ?: 3) >= 3 }.toSet())
     }
     var adding by remember { mutableStateOf(false) }
     val tgt = relays.filter { it in chosen }

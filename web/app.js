@@ -103,7 +103,8 @@ const normRelay = input => {
   return (u.startsWith("wss://") || u.startsWith("ws://")) && (h.includes(".") || h.startsWith("localhost")) ? u : null;
 };
 const tag = (e, n) => e.tags.find(t => t[0] === n)?.[1];
-const address = e => e.kind >= 30000 ? `${e.kind}:${e.pubkey}:${tag(e, "d") || ""}` : `${e.kind}:${e.pubkey}`;
+// Como NIP-01: "kind:pubkey:d" (las listas reemplazables llevan la d vacía, con los dos puntos)
+const address = e => `${e.kind}:${e.pubkey}:${e.kind >= 30000 ? tag(e, "d") || "" : ""}`;
 const now = () => Math.floor(Date.now() / 1000);
 let toastT = 0;
 function toast(msg, ms = 2600) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms); }
@@ -387,6 +388,69 @@ function relays(sn, r) {
   h += shown.map(u => { const i = st.info[u], s = statsOf(sn, u), rej = N.rejections[u];
     return `<button class="group rcard" data-a="relayinfo" data-x="${esc(u)}"><div class="rhead"><span class="t"><b>${esc(i?.name || host(u))}</b>${i?.name && i.name !== host(u) ? `<div class="mono small muted">${esc(host(u))}</div>` : ""}</span>${starsHtml(ratingOf(signalsOf(u))?.stars)}</div>${summaryLine(signalsOf(u))}<div style="margin-top:6px">${relayChips(u, sn)}</div><div class="small muted">${esc(roleOf(sn, u))}</div>${s ? `<div class="small">${T("ri_stats", ...s)}</div>` : ""}${rej ? `<div class="warn small">⚠ ${esc(T("ri_w_reject", rej.slice(0, 120)))}</div>` : ""}</button>`; }).join("");
   return h + `<div class="stack" style="padding:0 4px"><button class="btn block" data-a="addrelaydlg">+ ${T("ri_add_relay")}</button></div>`;
+}
+// ---------- Operaciones en grupo ----------
+const hasAtRelay = (r, ev) => { const sn = snap(); if (!sn?.reached.has(r)) return null; return copiesOf({ ...sn, relays: [r] }, ev)[0].state !== "missing"; };
+const missingAtRelay = (r, ev) => { const sn = snap(); if (!sn?.reached.has(r)) return true; return needsSync(copiesOf({ ...sn, relays: [r] }, ev)[0]); };
+/** Datos que, borrados de [relays], no quedarían en ningún otro relay que respondió. */
+function orphansOf(relays, picks) {
+  const sn = snap(); if (!sn) return [];
+  return picks.filter(([, ev]) => !copiesOf(sn, ev).some(c => !relays.includes(c.relay) && c.state !== "missing" && c.state !== "unknown"));
+}
+const labelOfKey = (k, ev) => k.startsWith("e:") ? k.slice(2) : listTitle(ev[0]);
+function groupBar(sn) {
+  const n = st.sel.size, a = acc(), others = st.accounts.some(x => x.pubkey !== a.pubkey && canSign(x));
+  const hasEntries = [...st.sel].some(k => k.startsWith("e:"));
+  const b = (act, icon, label, on, cls = "") => `<button data-a="${act}" class="${cls}" ${on ? "" : "disabled"}><span class="i">${icon}</span>${label}</button>`;
+  return `<div class="gbar">${b("gcopy", "⇪", T("g_copy"), n)}${b("gdel", "⇣", T("g_delete"), n && canSign(a), "d")}${b("gacc", "👤", T("g_account"), hasEntries && others)}${b("gmore", "⋯", T("g_more"), true)}</div>`;
+}
+const grpRelays = () => [...new Set([...snap().relays, ...appRelays(), ...st.grp.extra])];
+function grpOpen(kind, preset) {
+  st.grp = { kind, extra: [], chosen: new Set() };
+  const picks = [...st.sel].map(k => { try { return [k, eventsOf(k)]; } catch { return null; } }).filter(Boolean);
+  if (preset) st.grp.chosen = new Set(preset);
+  else if (kind === "copy") {
+    const ok = picks.filter(([, ev]) => !ev.some(e => encoding(e.content) === "plain"));
+    grpRelays().forEach(r => { if (snap().reached.has(r) && ok.some(([, ev]) => missingAtRelay(r, ev)) && (ratingOf(signalsOf(r))?.stars ?? 3) >= 3) st.grp.chosen.add(r); });
+  }
+  grpRender();
+}
+function grpRender() {
+  const g = st.grp, del = g.kind === "delete", sn = snap();
+  const picks = [...st.sel].map(k => { try { return [k, eventsOf(k)]; } catch { return null; } }).filter(Boolean);
+  const ok = picks.filter(([, ev]) => !ev.some(e => encoding(e.content) === "plain")), plain = picks.length - ok.length;
+  const relays = grpRelays();
+  const count = r => del ? picks.filter(([, ev]) => hasAtRelay(r, ev) !== false).length : ok.filter(([, ev]) => missingAtRelay(r, ev)).length;
+  const counts = Object.fromEntries(relays.map(r => [r, count(r)]));
+  const tgt = relays.filter(r => g.chosen.has(r) && counts[r] > 0), work = tgt.reduce((x, r) => x + counts[r], 0);
+  const bytes = picks.reduce((x, [, ev]) => x + ev.reduce((y, e) => y + e.content.length, 0), 0);
+  const rows = relays.map(r => {
+    const n = counts[r], known = sn.reached.has(r), on = g.chosen.has(r) && n > 0;
+    const sub = !known && sn.relays.includes(r) ? T("g_unknown") : del ? (n ? T("g_has", n, picks.length) : T("g_has_none")) : (n ? T("g_missing", n, picks.length) : T("g_all_there"));
+    return `<button class="grow${on ? " on" : ""}" ${n ? `data-a="grel" data-x="${esc(r)}"` : "disabled"}>${cbx(on ? "on" : "")}<span class="t"><div class="n mono">${esc(host(r))}</div><div class="m">${esc(sub)}</div></span>${starsHtml(ratingOf(signalsOf(r))?.stars)}</button>`;
+  }).join("");
+  const warn = [];
+  if (!del && plain) warn.push(TP("g_w_plain", plain));
+  if (!del) tgt.forEach(r => { const s = ratingOf(signalsOf(r))?.stars; if (s != null && s <= 2) warn.push(T("g_w_low", host(r), s)); });
+  if (del) { const o = orphansOf(tgt, picks).length; if (o) warn.push(TP("g_w_orphan", o)); }
+  const nRel = TP("g_relays", tgt.length);
+  sheet(`<div class="pk"><div class="pk-body" style="padding-top:14px"><h3 style="margin:0">${T(del ? "g_delete" : "g_copy")}</h3><div class="small muted">${TP("sel_count", picks.length)} · ${size(bytes)}</div>
+    <div class="grows">${rows}</div>${del ? "" : `<button class="btn t small" data-a="grpother">${T("g_other")}</button>`}
+    ${warn.map(w => `<div class="gwarn${del ? " d" : ""}">⚠ ${esc(w)}</div>`).join("")}</div>
+    <div class="pk-bar"><div class="small muted">${tgt.length ? T(del ? "g_del_sum" : "g_copy_sum", work, nRel) : T("g_pick_relays")}</div>
+    <button class="btn block ${del ? "dfill" : "p"}" data-a="grpgo" ${tgt.length && work ? "" : "disabled"}>${T(del ? "g_del_go" : "g_copy_go", nRel)}</button></div></div>`);
+  $(".sheet").classList.add("tall");
+}
+function groupResult(del, out) {
+  const lines = out.map(o => {
+    const bad = o.failed > 0 || o.ignored > 0;
+    const parts = [T(del ? "g_r_deleted" : "g_r_copied", host(o.relay), o.done)];
+    if (o.failed) parts.push(T("g_r_failed", o.failed) + (o.reason ? ` («${o.reason.slice(0, 80)}»)` : ""));
+    if (o.ignored) parts.push(T("g_r_ignored", o.ignored));
+    return `<div class="${bad ? "warn" : ""}">${bad ? "⚠" : "✓"} ${esc(parts.join(" · "))}</div>`;
+  }).join("");
+  const sk = out[0]?.skipped ? `<p class="small muted">${TP("g_r_skipped", out[0].skipped)}</p>` : "";
+  setTimeout(() => dialog(`<h3>${T("g_result")}</h3><div class="gres">${lines}</div>${sk}<div class="acts"><button class="btn p" data-a="gdone">${T("g_done")}</button></div>`), 0);
 }
 function relaysGroup(sn, events, key) {
   const c = copiesOf(sn, events), miss = c.filter(needsSync).length;
@@ -673,6 +737,63 @@ const OPS = {
     sn.entries = sn.entries.filter(x => x.d !== d); delete st.opened[okey(a.pubkey, d)];
     toast(T("deleted")); st.route.pop();
   },
+  async groupCopy({ relays, keys }) {
+    const picks = keys.map(k => { try { return [k, eventsOf(k)]; } catch { return null; } }).filter(Boolean);
+    const ok = picks.filter(([, ev]) => !ev.some(e => encoding(e.content) === "plain"));
+    const jobs = relays.map(r => [r, ok.filter(([, ev]) => missingAtRelay(r, ev))]);
+    const total = Math.max(1, jobs.reduce((a, [, l]) => a + l.length, 0)); let step = 0;
+    const out = [];
+    for (const [r, todo] of jobs) {
+      let done = 0;
+      for (const [, ev] of todo) {
+        st.busy = T("busy_step", ++step, total); renderBusy();
+        let good = true; for (const e of ev) if (await N.publish([r], e) === 0) { good = false; break; }
+        if (good) done++;
+      }
+      out.push({ relay: r, done, failed: todo.length - done, reason: done < todo.length ? N.rejections[r] : null, skipped: picks.length - ok.length });
+    }
+    await refresh();
+    groupResult(false, out);
+  },
+  async groupDelete({ relays, keys, at, tid }) {
+    const a = acc(), picks = keys.map(k => { try { return [k, eventsOf(k)]; } catch { return null; } }).filter(Boolean);
+    for (const [k, ev] of orphansOf(relays, picks)) await toTrash(a.pubkey, labelOfKey(k, ev), ev, tid + k);
+    const jobs = relays.map(r => [r, picks.filter(([, ev]) => hasAtRelay(r, ev) !== false)]);
+    const total = Math.max(1, jobs.reduce((x, [, l]) => x + Math.ceil(l.length / 50), 0)); let step = 0;
+    const sent = [];
+    for (const [r, todo] of jobs) {
+      let done = 0;
+      for (let i = 0; i < todo.length; i += 50) {
+        const chunk = todo.slice(i, i + 50), events = chunk.flatMap(([, ev]) => ev);
+        st.busy = T("busy_step", ++step, total); renderBusy();
+        const tags = [...events.flatMap(x => [["e", x.id], ["a", address(x)]]), ...[...new Set(events.map(x => x.kind))].map(k => ["k", String(k)])];
+        try { await publishSigned(signerOf(a), [r], { kind: DELETION, created_at: at, tags, content: "" }); done += chunk.length; } catch {}
+      }
+      Stats.forget(a.pubkey, todo.flatMap(([, ev]) => ev.map(address)), r);
+      sent.push([r, todo, done]);
+    }
+    await refresh();
+    const after = snap();
+    groupResult(true, sent.map(([r, todo, done]) => {
+      const still = after?.reached.has(r) ? todo.filter(([, ev]) => hasAtRelay(r, ev) === true).length : 0;
+      return { relay: r, done: done - Math.min(still, done), failed: todo.length - done, reason: done < todo.length ? N.rejections[r] : null, ignored: still };
+    }));
+  },
+  async groupAccount({ keys, target, at }) {
+    const a = acc(), t = st.accounts.find(x => x.pubkey === target); if (!canSign(t)) throw new TErr("read");
+    const ds = keys.filter(k => k.startsWith("e:")).map(k => k.slice(2)), relays = await relaysFor(target); let n = 0, i = 0;
+    for (const d of ds) {
+      st.busy = T("busy_step", ++i, ds.length); renderBusy();
+      const e = snap()?.entries.find(x => x.d === d); if (!e) continue;
+      try {
+        const o = await openEntry(a, e), old = st.snaps[target]?.entries.find(x => x.d === d);
+        await writeEntry(t, relays, d, o.text, o.manifest, old ? old.parts.length : e.parts.length, at); n++;
+      } catch {}
+    }
+    delete st.snaps[target];
+    if (ds.length && !n) throw new TErr("offline");
+    toast(TP("g_acc_done", n)); st.sel = null;
+  },
   async copyItems({ relay, keys }) {
     const todo = keys.map(k => { try { return eventsOf(k); } catch { return null; } }).filter(Boolean); let n = 0;
     for (const ev of todo) { if (ev.some(e => encoding(e.content) === "plain")) continue; let ok = true; for (const e of ev) if (await N.publish([relay], e) === 0) { ok = false; break; } if (ok) n++; }
@@ -746,7 +867,8 @@ function addAccount(a) {
   st.active = a.pubkey; saveAccounts(); st.route = [{ v: "home" }]; st.sheet = null;
   closeLayer(); loadProfiles(); refresh();
 }
-function setActive(pk) { if (pk === st.active) return; st.active = pk; saveAccounts(); st.route = [{ v: "home" }]; st.q = ""; render(); if (!st.snaps[pk]) refresh(); else refresh(); }
+function setActive(pk) {
+  st.sel = null; if (pk === st.active) return; st.active = pk; saveAccounts(); st.route = [{ v: "home" }]; st.q = ""; render(); if (!st.snaps[pk]) refresh(); else refresh(); }
 function removeAccount(pk) {
   N.forget(pk); st.accounts = st.accounts.filter(a => a.pubkey !== pk);
   delete st.snaps[pk]; Object.keys(st.opened).forEach(k => k.startsWith(pk + "|") && delete st.opened[k]);
@@ -897,6 +1019,7 @@ function render() {
   else if (!sn && st.failed) h += `<div class="center"><p class="muted">${T("load_failed")}</p><button class="btn" data-a="refresh">${T("retry")}</button></div>`;
   else if (!sn) h += `<div class="center"><div class="spin" style="margin:30px auto 12px"></div><p class="muted">${T("loading")}</p></div>`;
   else h += ({ home, folder, lists, item, edit, list, relays }[r.v] || home)(sn, r);
+  if (sn && selOn() && SEL_VIEWS.includes(r.v)) h += groupBar(sn);
   const focus = document.activeElement?.id, pos = document.activeElement?.selectionStart;
   app.innerHTML = h;
   if (focus) { const el = document.getElementById(focus); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch {} } }
@@ -908,14 +1031,24 @@ function renderBusy() {
   if (!b) { b = document.createElement("div"); b.id = "busy"; b.className = "shade mid"; document.body.appendChild(b); }
   b.innerHTML = `<div class="dialog"><div class="busy"><div class="spin"></div><div>${esc(st.busy)}</div></div></div>`;
 }
+const SEL_VIEWS = ["home", "folder", "lists"];
+function folderKeys(r) {
+  const sn = snap(); if (!sn) return null;
+  return r.v === "folder" ? sn.entries.filter(e => e.app === r.app).map(e => "e:" + e.d) : r.v === "lists" ? sn.lists.map(e => "l:" + address(e)) : null;
+}
 function topBar(r) {
+  if (selOn() && SEL_VIEWS.includes(r.v)) {
+    const keys = folderKeys(r), all = keys?.length && keys.every(k => st.sel.has(k));
+    return `<div class="top selbar">${r.v !== "home" ? `<button class="icon-btn" data-a="back" aria-label="${T("back")}">←</button>` : ""}<button class="icon-btn" data-a="selexit" aria-label="${T("sel_exit")}">✕</button><h1>${TP("sel_count", st.sel.size)}</h1>${keys?.length ? `<button class="btn t" data-a="togkeys" data-x='${J(keys)}'>${T(all ? "sel_none" : "sel_all")}</button>` : ""}</div>`;
+  }
   const a = acc();
   const left = r.v === "home"
     ? `${LOGO}<h1>${BETA ? "Tansu Beta" : "Tansu"}</h1>`
     : `<button class="icon-btn" data-a="back" aria-label="${T("back")}">←</button><h1>${esc(title(r))}</h1>`;
   const chip = `<button class="chip" data-a="accounts">${avatar(a)}${r.v === "home" ? `<span>${esc(nameOf(a))}</span>` : ""}</button>`;
   const gear = r.v === "home" ? `<button class="icon-btn" data-a="go" data-x='{"v":"settings"}' aria-label="${T("settings")}">⚙</button>` : "";
-  return `<div class="top">${left}${r.v === "settings" ? "" : chip}${gear}</div>`;
+  const selb = SEL_VIEWS.includes(r.v) && snap() ? `<button class="icon-btn" data-a="selstart" aria-label="${T("sel_start")}" title="${T("sel_start")}">☑</button>` : "";
+  return `<div class="top">${left}${selb}${r.v === "settings" ? "" : chip}${gear}</div>`;
 }
 function title(r) {
   const sn = snap();
@@ -935,12 +1068,19 @@ function encBadge(enc) {
   if (enc === "plain") return `<span class="badge plain">${T("badge_plain")}</span>`;
   return `<span class="badge">${T("badge_empty")}</span>`;
 }
-const folderRow = (name, meta, r, icon = "📁") =>
-  `<button class="row" data-a="go" data-x='${J(r)}'><span class="ico f">${icon}</span><span class="t"><div class="n">${esc(name)}</div><div class="m">${esc(meta)}</div></span><span class="chev">›</span></button>`;
+// Selección de varios datos: claves "e:<d>" y "l:<dirección>" (como eventsOf). st.sel = Set o null.
+const selOn = () => !!st.sel;
+const cbx = (cls) => `<span class="cb ${cls}" aria-hidden="true">${cls === "on" ? "✓" : cls === "mid" ? "–" : ""}</span>`;
+const folderRow = (name, meta, r, icon = "📁", keys = []) => {
+  const on = st.sel ? keys.filter(k => st.sel.has(k)).length : 0, cls = on === 0 ? "" : on === keys.length ? "on" : "mid";
+  if (selOn()) return `<div class="row${on ? " sel" : ""}"><button class="rowmain" data-a="togkeys" data-x='${J(keys)}' ${keys.length ? "" : "disabled"}>${cbx(cls)}<span class="ico f">${icon}</span><span class="t"><div class="n">${esc(name)}</div><div class="m">${esc(meta)}${on ? ` · <b class="acc-t">${T("pk_chosen", on)}</b>` : ""}</div></span></button><button class="chev" data-a="go" data-x='${J(r)}' aria-label="${esc(name)}">›</button></div>`;
+  return `<button class="row" data-a="go" data-x='${J(r)}' data-keys='${J(keys)}'><span class="ico f">${icon}</span><span class="t"><div class="n">${esc(name)}</div><div class="m">${esc(meta)}</div></span><span class="chev">›</span></button>`;
+};
+const selAttrs = (k, go) => selOn() ? `data-a="togkeys" data-x='${J([k])}' class="row${st.sel.has(k) ? " sel" : ""}"` : `data-a="go" data-x='${J(go)}' data-keys='${J([k])}' class="row"`;
 const entryRow = (e, full) =>
-  `<button class="row" data-a="go" data-x='${J({ v: "item", d: e.d })}'><span class="ico">${e.enc === "nip44" || e.enc === "nip04" ? "🔒" : "📄"}</span><span class="t"><div class="n">${esc(full ? e.d : e.name)}</div><div class="m">${esc(ago(e.updated) + " · " + size(e.bytes) + (e.parts.length ? " · " + TP("parts", e.parts.length) : ""))}</div></span>${snap() ? relaysBadge(snap(), e.events) : ""}${encBadge(e.enc)}</button>`;
+  `<button ${selAttrs("e:" + e.d, { v: "item", d: e.d })}>${selOn() ? cbx(st.sel.has("e:" + e.d) ? "on" : "") : ""}<span class="ico">${e.enc === "nip44" || e.enc === "nip04" ? "🔒" : "📄"}</span><span class="t"><div class="n">${esc(full ? e.d : e.name)}</div><div class="m">${esc(ago(e.updated) + " · " + size(e.bytes) + (e.parts.length ? " · " + TP("parts", e.parts.length) : ""))}</div></span>${snap() ? relaysBadge(snap(), e.events) : ""}${encBadge(e.enc)}</button>`;
 const listRow = e =>
-  `<button class="row" data-a="go" data-x='${J({ v: "list", addr: address(e) })}'><span class="ico">☰</span><span class="t"><div class="n">${esc(listTitle(e))}</div><div class="m">${esc(`kind ${e.kind} · ${TP("public_items", publicItems(e).length)} · ${ago(e.created_at)}`)}</div></span>${e.content ? encBadge(encoding(e.content)) : ""}</button>`;
+  `<button ${selAttrs("l:" + address(e), { v: "list", addr: address(e) })}>${selOn() ? cbx(st.sel.has("l:" + address(e)) ? "on" : "") : ""}<span class="ico">☰</span><span class="t"><div class="n">${esc(listTitle(e))}</div><div class="m">${esc(`kind ${e.kind} · ${TP("public_items", publicItems(e).length)} · ${ago(e.created_at)}`)}</div></span>${e.content ? encBadge(encoding(e.content)) : ""}</button>`;
 
 function home(sn) {
   let h = `<label class="search">🔍<input id="q" data-in="q" placeholder="${T("search_hint")}" value="${esc(st.q)}" autocomplete="off">${st.q ? `<button class="btn t" data-a="clearq">✕</button>` : ""}</label>`;
@@ -956,8 +1096,9 @@ function home(sn) {
   for (const e of sn.entries) (groups[e.app] ||= []).push(e);
   h += `<div class="sec">${T("drawer_apps")}</div>`;
   if (!sn.entries.length) h += `<p class="muted" style="padding:0 10px">${T("apps_empty")}</p>`;
-  for (const [app, l] of Object.entries(groups)) h += folderRow(appName(app), TP("items", l.length) + " · " + ago(Math.max(...l.map(x => x.updated))), { v: "folder", app });
-  h += `<div class="sec">${T("drawer_lists")}</div>` + folderRow(T("folder_lists"), TP("items", sn.lists.length), { v: "lists" }, "☰");
+  for (const [app, l] of Object.entries(groups)) h += folderRow(appName(app), TP("items", l.length) + " · " + ago(Math.max(...l.map(x => x.updated))), { v: "folder", app }, "📁", l.map(x => "e:" + x.d));
+  h += `<div class="sec">${T("drawer_lists")}</div>` + folderRow(T("folder_lists"), TP("items", sn.lists.length), { v: "lists" }, "☰", sn.lists.map(x => "l:" + address(x)));
+  if (selOn()) h += `<p class="small muted" style="padding:8px 10px">${T("sel_hint_home")}</p>`;
   h += `<p class="small muted" style="padding:14px 10px"><button class="btn t small" data-a="go" data-x='{"v":"relays"}'>${T("relays_used", sn.relays.length)}</button> · ${T("privacy_short")} · <button class="btn t small" data-a="refresh">↻ ${T("retry")}</button></p>`;
   return h;
 }
@@ -1164,6 +1305,41 @@ const ACT = {
   sync(el) { run("sync", { key: el.dataset.x }); },
   relaycopy(el) { run("copyRelay", JSON.parse(el.dataset.x)); },
   relayinfo(el) { openRelay(el.dataset.x, el.dataset.k); },
+  selstart() { st.sel = new Set(); render(); },
+  selexit() { st.sel = null; render(); },
+  togkeys(el) {
+    const keys = JSON.parse(el.dataset.x); if (!keys.length) return;
+    const all = keys.every(k => st.sel.has(k)); keys.forEach(k => all ? st.sel.delete(k) : st.sel.add(k)); render();
+  },
+  gcopy() { grpOpen("copy"); },
+  gdel() { grpOpen("delete"); },
+  gmore() {
+    sheet(`<h3>${T("g_more")}</h3><button class="row" data-a="gall"><span class="t"><div class="n">${T("g_select_everything")}</div></span></button>${canSign(acc()) ? `<button class="row" data-a="gdelall" ${st.sel.size ? "" : "disabled"}><span class="t"><div class="n danger">${T("g_delete_all")}</div></span></button>` : ""}`);
+  },
+  gall() { const sn = snap(); st.sel = new Set([...sn.entries.map(e => "e:" + e.d), ...sn.lists.map(e => "l:" + address(e))]); closeLayer(); render(); },
+  gdelall() { grpOpen("delete", snap().relays); },
+  grel(el) { const g = st.grp, r = el.dataset.x; g.chosen.has(r) ? g.chosen.delete(r) : g.chosen.add(r); grpRender(); },
+  grpother() {
+    dialog(`<h3>${T("ri_add_relay")}</h3><input id="addr-in" class="in mono" placeholder="wss://relay.example.com" autocapitalize="off"><div id="addr-err" class="err"></div>
+      <div class="acts"><button class="btn" data-a="grpback">${T("cancel")}</button><button class="btn p" data-a="grpadd">${T("ri_add_relay")}</button></div>`);
+    $("#addr-in").focus();
+  },
+  grpadd() { const r = normRelay($("#addr-in").value); if (!r) { $("#addr-err").textContent = T("relay_invalid"); return; } const g = st.grp; if (!g.extra.includes(r)) g.extra.push(r); g.chosen.add(r); askMonitors([r]); grpRender(); },
+  grpback() { grpRender(); },
+  grpgo() {
+    const g = st.grp, relays = grpRelays().filter(r => g.chosen.has(r)), keys = [...st.sel];
+    if (g.kind === "copy") { st.grp = null; closeLayer(); run("groupCopy", { relays, keys }); return; }
+    confirmDlg(TP("g_del_title", keys.length), T("g_del_body", relays.map(host).join(", ")), T("delete"), () => { st.grp = null; run("groupDelete", { relays, keys }); }, true);
+  },
+  gacc() {
+    const a = acc(), n = [...st.sel].filter(k => k.startsWith("l:")).length;
+    sheet(`<h3>${T("copy_to_title")}</h3>${n ? `<p class="small muted">${TP("g_acc_note", n)}</p>` : ""}${st.accounts.filter(x => x.pubkey !== a.pubkey && canSign(x)).map(t => `<button class="row" data-a="gaccgo" data-x="${t.pubkey}">${avatar(t, "l")}<span class="t"><div class="n">${esc(nameOf(t))}</div><div class="m">${methodLabel(t.method)}</div></span></button>`).join("")}`);
+  },
+  gaccgo(el) {
+    const t = st.accounts.find(x => x.pubkey === el.dataset.x), n = [...st.sel].filter(k => k.startsWith("e:")).length;
+    confirmDlg(T("copy_confirm_title", nameOf(t)), TP("g_acc_body", n), T("copy"), () => run("groupAccount", { keys: [...st.sel], target: t.pubkey }));
+  },
+  gdone() { st.sel = null; closeLayer(); render(); },
   relayretry(el) { delete st.info[el.dataset.x]; closeLayer(); refresh(); },
   copythis(el) { const o = JSON.parse(el.dataset.x); closeLayer(); run("copyItems", { relay: o.relay, keys: [o.key] }); },
   pickopen(el) { const o = JSON.parse(el.dataset.x); pickOpen(o.relay, o.cur); },
@@ -1268,7 +1444,17 @@ const ACT = {
   async copytext(el) { try { await navigator.clipboard.writeText(el.dataset.x); toast(T("copied_ok")); } catch { toast(el.dataset.x, 6000); } },
   async install() { const p = st.install; if (!p) return; st.install = null; p.prompt(); try { await p.userChoice; } catch {} render(); },
 };
+// Mantener pulsado un dato o carpeta: modo selección con ese elemento marcado
+let pressT = null, pressed = false;
+document.addEventListener("pointerdown", ev => {
+  pressed = false;
+  const el = ev.target.closest("[data-keys]"); if (!el || st.sel) return;
+  pressT = setTimeout(() => { pressed = true; st.sel = new Set(JSON.parse(el.dataset.keys)); render(); navigator.vibrate?.(20); }, 500);
+});
+for (const t of ["pointerup", "pointercancel", "pointermove"]) document.addEventListener(t, ev => { if (t === "pointermove" && Math.abs(ev.movementX) + Math.abs(ev.movementY) < 4) return; clearTimeout(pressT); });
+document.addEventListener("contextmenu", ev => { if (ev.target.closest("[data-keys]")) ev.preventDefault(); });
 document.addEventListener("click", ev => {
+  if (pressed) { pressed = false; ev.preventDefault(); return; }
   const el = ev.target.closest("[data-a]"); if (!el) return;
   const f = ACT[el.dataset.a]; if (!f) return;
   if (el.dataset.a !== "shade" && el.dataset.a !== "setactive") ev.preventDefault();
@@ -1283,7 +1469,8 @@ document.addEventListener("input", ev => {
   if (ev.target.id === "pk-q" && st.pk) { st.pk.q = ev.target.value; pickBody(); }
 });
 document.addEventListener("keydown", ev => {
-  if (ev.key === "Escape" && $("#layer").innerHTML) { st.pk = null; closeLayer(); }
+  if (ev.key === "Escape" && $("#layer").innerHTML) { st.pk = null; st.grp = null; closeLayer(); }
+  else if (ev.key === "Escape" && st.sel) { st.sel = null; render(); }
   if (ev.key === "Enter" && ev.target.id === "bunker-in") loginBunker();
   if (ev.key === "Enter" && ev.target.id === "npub-in") loginNpub();
   if (ev.key === "Enter" && ev.target.id === "relay-in") ACT.addrelay();
