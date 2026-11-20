@@ -304,6 +304,108 @@ class Explorer(
         if (a.pubkey == _state.value.pubkey) refresh()
     }
 
+    // ---------- Operaciones en grupo ----------
+
+    /** Resultado en un relay: hechos, fallidos (con el último motivo del relay) y, al borrar, los que siguen ahí. */
+    data class RelayOutcome(val relay: String, val done: Int, val failed: Int = 0, val reason: String? = null, val ignored: Int = 0, val skipped: Int = 0)
+
+    /** Un dato elegido: sus eventos y cómo se llama (para la papelera). */
+    data class Pick(val key: String, val label: String, val events: List<Event>)
+
+    /** Lo que tiene [relay] de [p] según la última carga (null = no lo sabemos: no respondió o no es de la cuenta). */
+    fun hasAt(relay: String, p: Pick): Boolean? {
+        val snap = _state.value.snapshot ?: return null
+        if (relay !in snap.reached) return null
+        return snap.copies(p.events).firstOrNull { it.relay == relay }?.state?.let { it != RelayCopy.State.MISSING }
+    }
+
+    /** Lo que le falta (o tiene anticuado) a [relay]; si no lo sabemos, todo. */
+    fun missingAt(relay: String, p: Pick): Boolean {
+        val snap = _state.value.snapshot ?: return true
+        if (relay !in snap.reached) return true
+        return snap.copies(p.events).firstOrNull { it.relay == relay }?.needsSync ?: true
+    }
+
+    /** Copia a varios relays lo que les falta de [picks]. Lo sin cifrar se salta (nunca se reenvía nada legible). */
+    suspend fun groupCopy(relays: List<String>, picks: List<Pick>): Result<List<RelayOutcome>> = attempt {
+        val ok = picks.filter { p -> p.events.none { detectEncoding(it.content) == Encoding.PLAIN } }
+        val jobs = relays.associateWith { r -> ok.filter { missingAt(r, it) } }
+        val total = jobs.values.sumOf { it.size }.coerceAtLeast(1)
+        var step = 0
+        val out = jobs.map { (r, todo) ->
+            var done = 0
+            todo.forEach { p ->
+                _progress.value = Progress(++step, total)
+                if (runCatching { vault.copyTo(listOf(r), p.events) }.isSuccess) done++
+            }
+            RelayOutcome(r, done, todo.size - done, if (done < todo.size) pool.rejections[r] else null, skipped = picks.size - ok.size)
+        }
+        _progress.value = null
+        reloadNow()
+        out
+    }
+
+    /**
+     * Borra [picks] de varios relays: una petición NIP-09 por relay (en tandas de 50 datos).
+     * Lo que se quedaría sin ninguna copia va antes a la papelera (cifrado, como estaba).
+     * Al acabar vuelve a cargar y cuenta lo que cada relay sigue teniendo (no todos hacen caso del borrado).
+     */
+    suspend fun groupDeleteFrom(relays: List<String>, picks: List<Pick>): Result<List<RelayOutcome>> = attempt {
+        val a = account()
+        if (!a.canSign) throw VaultException(VaultException.Reason.READ_ONLY)
+        val snap = _state.value.snapshot ?: throw VaultException(VaultException.Reason.OFFLINE)
+        orphans(relays, picks).forEach { trash.add(a.pubkey, it.label, it.events) }
+        val crypto = signer.crypto(a)
+        val jobs = relays.associateWith { r -> picks.filter { hasAt(r, it) != false } }
+        val total = jobs.values.sumOf { (it.size + 49) / 50 }.coerceAtLeast(1)
+        var step = 0
+        val sent = jobs.map { (r, todo) ->
+            var done = 0
+            todo.chunked(50).forEach { chunk ->
+                _progress.value = Progress(++step, total)
+                if (runCatching { vault.deleteFrom(crypto, listOf(r), chunk.flatMap { it.events }) }.isSuccess) done += chunk.size
+            }
+            stats.forget(a.pubkey, todo.flatMap { p -> p.events.map { it.address } }, r)
+            Triple(r, todo, done)
+        }
+        _progress.value = null
+        val after = reloadNow() ?: snap
+        sent.map { (r, todo, done) ->
+            val still = if (r in after.reached) todo.count { p -> after.copies(p.events).firstOrNull { it.relay == r }?.state.let { it != null && it != RelayCopy.State.MISSING } } else 0
+            RelayOutcome(r, done - still.coerceAtMost(done), todo.size - done, if (done < todo.size) pool.rejections[r] else null, ignored = still)
+        }
+    }
+
+    /** Datos de [picks] que, borrados de [relays], no quedarían en ningún otro relay que respondió. */
+    fun orphans(relays: List<String>, picks: List<Pick>): List<Pick> {
+        val snap = _state.value.snapshot ?: return emptyList()
+        return picks.filter { p -> snap.copies(p.events).none { it.relay !in relays && it.state != RelayCopy.State.MISSING && it.state != RelayCopy.State.UNKNOWN } }
+    }
+
+    /** Copia varias entradas a otra cuenta (se descifran y se vuelven a cifrar para ella). Devuelve cuántas. */
+    suspend fun groupCopyToAccount(entries: List<Entry>, target: Account): Result<Int> = attempt {
+        if (!target.canSign) throw VaultException(VaultException.Reason.READ_ONLY)
+        var n = 0
+        entries.forEachIndexed { i, e ->
+            _progress.value = Progress(i + 1, entries.size)
+            if (copyTo(e, target).isSuccess) n++
+        }
+        _progress.value = null
+        if (entries.isNotEmpty() && n == 0) throw VaultException(VaultException.Reason.OFFLINE)
+        n
+    }
+
+    /** Carga ahora (esperando) y actualiza el estado. */
+    private suspend fun reloadNow(): Snapshot? {
+        val pk = _state.value.pubkey ?: return null
+        loadJob?.cancel()
+        val r = try { vault.load(pk) } catch (e: CancellationException) { throw e } catch (_: Exception) { null } ?: return null
+        cache[pk] = r
+        runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { stats.record(r) } }
+        if (_state.value.pubkey == pk) _state.update { it.copy(load = Load.Ready(r), refreshing = false, rejections = HashMap(pool.rejections), statsTick = it.statsTick + 1) }
+        return r
+    }
+
     /** Al quitar una cuenta se olvida lo que había en memoria. */
     fun forget(pubkey: String) { cache.remove(pubkey) }
 }

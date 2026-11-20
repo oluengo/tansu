@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tansu · Operaciones en grupo (demo)</title>
+<style>
+:root{--bg:#F6F5F1;--card:#fff;--ink:#1D1F27;--muted:#6B7080;--line:#E7E6E1;--soft:#EFEEEA;--accent:#4C5FD5;--acc-soft:#E9ECF8;--lock:#B5651D;--lock-soft:#FFF4E6;--ok:#2E8A5A;--ok-soft:#E3F2EA;--danger:#C2413B;--danger-soft:#FBE9E8;--folder:#B07A4A;--folder-soft:#F5ECDF;--star:#E9A23B}
+*{box-sizing:border-box}body{margin:0;background:#E9E8E3;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+.wrap{max-width:1000px;margin:0 auto;padding:18px}
+h1{font-size:19px;margin:0 0 4px}.lead{color:var(--muted);margin:0 0 14px;font-size:14px}
+.stage{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:370px;height:790px;background:var(--bg);border-radius:30px;box-shadow:0 10px 40px rgba(0,0,0,.12);position:relative;overflow:hidden;flex:none;display:flex;flex-direction:column}
+.scr{flex:1;overflow:auto;padding-bottom:16px}
+.top{display:flex;align-items:center;gap:10px;padding:16px 14px 8px;min-height:58px}.top h2{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top.sel{background:var(--acc-soft)}.top.sel h2{color:var(--accent)}
+.ib{font-size:20px;padding:4px 8px;border-radius:8px}.tb{font-size:13px;font-weight:600;color:var(--accent);padding:6px 8px;border-radius:8px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 14px;margin:0 8px;border-radius:12px;cursor:pointer;user-select:none}
+.row:hover{background:#fff}.row.on{background:var(--acc-soft)}
+.fi{width:38px;height:38px;border-radius:11px;background:var(--folder-soft);color:var(--folder);display:grid;place-items:center;font-size:18px;flex:none}
+.di{width:38px;height:38px;border-radius:11px;background:var(--soft);display:grid;place-items:center;font-size:15px;flex:none}
+.row .n{flex:1;min-width:0}.row .n b{display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row .n span{font-size:12px;color:var(--muted)}
+.cb{width:22px;height:22px;border-radius:7px;border:2px solid #B9BCC6;display:grid;place-items:center;flex:none;background:#fff;font-size:13px;color:#fff;line-height:1}
+.cb.on,.cb.mid{background:var(--accent);border-color:var(--accent)}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--muted);white-space:nowrap;display:inline-block}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-lock{background:var(--lock-soft);color:var(--lock)}.b-no{background:var(--danger-soft);color:var(--danger)}
+.hint{font-size:12px;color:var(--muted);padding:2px 22px 8px}
+.actions{background:#fff;border-top:1px solid var(--line);padding:8px 8px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.actions button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:6px 2px;border-radius:10px;color:var(--ink)}
+.actions button .i{font-size:19px;line-height:1}.actions button:disabled{opacity:.35}.actions button.d{color:var(--danger)}
+.shade{position:absolute;inset:0;background:rgba(20,22,30,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--card);width:100%;max-height:92%;border-radius:22px 22px 0 0;display:flex;flex-direction:column}
+.sheet .body{overflow:auto;padding:16px 18px 8px}.sheet h3{margin:0 0 2px;font-size:18px}
+.sheet .bar{border-top:1px solid var(--line);padding:10px 18px 16px}
+.rl{display:flex;align-items:center;gap:10px;padding:10px 4px;border-top:1px solid var(--line);cursor:pointer}
+.rl:first-of-type{border-top:0}.rl .n{flex:1;min-width:0}.rl .n b{display:block;font-size:14px}.rl .n span{font-size:12px;color:var(--muted)}
+.rl.dis{opacity:.5;cursor:default}
+.stars{color:var(--star);font-size:12px;letter-spacing:-1px}.stars i{color:#D9D7D0;font-style:normal}
+.btn{display:block;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px;font-weight:600;font-size:14px;margin-top:8px;text-align:center}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}.btn.dg{background:var(--danger);border-color:var(--danger);color:#fff}.btn:disabled{opacity:.45;cursor:default}
+.sum{font-size:12.5px;color:var(--muted)}
+.warn{background:var(--lock-soft);color:var(--lock);border-radius:12px;padding:10px 12px;font-size:12.5px;margin-top:10px}
+.warn.d{background:var(--danger-soft);color:var(--danger)}
+.prog{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin:10px 0 6px}.prog i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.res{font-size:13px;margin-top:6px}.res div{padding:3px 0}
+.link{color:var(--accent);font-weight:600;font-size:13px;padding:8px 4px}
+.notes{flex:1;min-width:280px;max-width:540px;font-size:14px}
+.notes .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 0 12px}.notes h4{margin:0 0 6px;font-size:14px}.notes ul{margin:0;padding-left:18px}.notes li{margin:4px 0}
+.toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);background:#1D1F27;color:#fff;padding:10px 14px;border-radius:12px;font-size:13px;white-space:nowrap;z-index:9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tansu · Operaciones en grupo</h1>
+  <p class="lead">Demo interactiva con datos de ejemplo. Mantén pulsado (o toca «Seleccionar») para elegir varios datos o carpetas enteras, y prueba las acciones de abajo.</p>
+  <div class="stage">
+    <div class="phone"><div class="scr" id="scr"></div><div id="act"></div><div id="layer"></div><div id="toast"></div></div>
+    <div class="notes">
+      <div class="card"><h4>Seleccionar</h4><ul>
+        <li><b>Mantener pulsado</b> un dato o carpeta, o «Seleccionar» arriba. Después, cada toque marca o desmarca.</li>
+        <li>En el inicio puedes marcar <b>carpetas enteras</b> (todos sus datos). Dentro de una carpeta, «Todo» la marca entera.</li>
+        <li>La selección se mantiene al entrar y salir de carpetas; arriba siempre ves cuántos datos llevas.</li></ul></div>
+      <div class="card"><h4>Acciones</h4><ul>
+        <li><b>Copiar a relays…</b>: marcas uno o varios relays. Cada uno dice cuántos de los elegidos le faltan; los que tienen todo al día salen sin marcar.</li>
+        <li><b>Borrar de relays…</b>: igual, pero dice cuántos tiene cada relay. Antes de borrar, avisa si algún dato se quedaría <b>sin ninguna copia</b>.</li>
+        <li><b>Otra cuenta</b> y <b>Exportar</b>, como ahora pero con varios. <b>Papelera</b>: borrar de todos los relays (queda copia local cifrada).</li>
+        <li>Progreso y resultado por relay: copiados, rechazados (con el motivo) y saltados (sin cifrar o demasiado grandes).</li></ul></div>
+      <div class="card"><h4>Seguridad</h4><ul>
+        <li>Se reenvían los mismos eventos, ya firmados y cifrados: copiar no firma nada nuevo.</li>
+        <li>Borrar firma una petición NIP-09 por relay: con una cuenta solo de lectura (npub), Borrar sale desactivado.</li></ul></div>
+    </div>
+  </div>
+</div>
+<script>
+const RELAYS = [
+  { u: "relay.damus.io", s: 5 }, { u: "nos.lol", s: 4 }, { u: "relay.primal.net", s: 3 }, { u: "relay.ejemplo.net", s: 1 },
+];
+// has: relays donde está cada dato (índice en RELAYS)
+const F = [
+  { f: "Wavestr", icon: "📻", items: [
+    { id: "wavestr/favorites", kb: 3.1, has: [0, 2] }, { id: "wavestr/settings", kb: 1.2, has: [0, 1, 2] },
+    { id: "wavestr/history", kb: 18.4, has: [0, 1] }, { id: "wavestr/stations", kb: 42, has: [0] }, { id: "wavestr/queue", kb: .8, has: [0, 1, 2, 3] }] },
+  { f: "Usus", icon: "🏋️", items: Array.from({ length: 12 }, (_, i) => ({ id: i ? `usus/backup-2026-${String(12 - i).padStart(2, "0")}` : "usus/backup", kb: 480 - i * 12, parts: 12 - Math.floor(i / 4), has: i % 3 === 0 ? [0, 1, 2] : i % 3 === 1 ? [0, 2] : [2] })) },
+  { f: "Otras", icon: "🗂", items: [{ id: "otra/ajustes", kb: .4, has: [0], plain: true }, { id: "notas/borradores", kb: 6.3, has: [1, 3] }] },
+  { f: "Listas", icon: "☰", items: [{ id: "Silenciados", kb: 2.2, has: [0, 1, 2] }, { id: "Marcadores", kb: 5, has: [0] }] },
+];
+const ALL = F.flatMap(g => g.items.map(i => ({ ...i, g: g.f })));
+const fmt = kb => kb < 1 ? Math.round(kb * 1024) + " B" : kb < 1000 ? (kb < 10 ? kb.toFixed(1) : Math.round(kb)) + " kB" : (kb / 1024).toFixed(1) + " MB";
+let view = "home", sel = new Set(), selMode = false, layer = null, rsel = new Set(), op = null;
+const $ = s => document.querySelector(s);
+const stars = n => `<span class="stars">${"★".repeat(n)}<i>${"★".repeat(5 - n)}</i></span>`;
+const chosen = () => ALL.filter(i => sel.has(i.id));
+const evs = l => l.reduce((a, i) => a + (i.parts ? i.parts + 1 : 1), 0);
+
+function home() {
+  return F.map(g => {
+    const ids = g.items.map(i => i.id), on = ids.filter(x => sel.has(x)).length;
+    const cls = on === 0 ? "" : on === ids.length ? "on" : "mid";
+    return `<div class="row ${on ? "on" : ""}" data-a="tapF" data-x="${g.f}">${selMode ? `<span class="cb ${cls}">${cls === "on" ? "✓" : cls === "mid" ? "–" : ""}</span>` : ""}
+      <span class="fi">${g.icon}</span><span class="n"><b>${g.f}</b><span>${g.items.length} datos${on ? ` · <b style="display:inline;color:var(--accent);font-size:12px">${on} elegidos</b>` : ""}</span></span>${selMode ? "" : `<span class="muted">›</span>`}</div>`;
+  }).join("") + (selMode ? `<p class="hint">Marca una carpeta para elegir todos sus datos, o entra para elegir algunos.</p>` : `<p class="hint">Mantén pulsado para seleccionar varios.</p>`);
+}
+function folder(f) {
+  const g = F.find(x => x.f === f);
+  return g.items.map(i => `<div class="row ${sel.has(i.id) ? "on" : ""}" data-a="tapI" data-x="${i.id}">${selMode ? `<span class="cb ${sel.has(i.id) ? "on" : ""}">${sel.has(i.id) ? "✓" : ""}</span>` : ""}
+    <span class="di">${i.plain ? "📄" : "🔒"}</span><span class="n"><b>${i.id}</b><span>${[i.parts ? i.parts + " partes" : null, fmt(i.kb), i.has.length + "/4 relays"].filter(Boolean).join(" · ")}</span></span></div>`).join("");
+}
+function topBar() {
+  if (selMode) {
+    const n = sel.size, inF = view !== "home", g = inF && F.find(x => x.f === view), all = g && g.items.every(i => sel.has(i.id));
+    return `<div class="top sel"><button class="ib" data-a="exit" aria-label="Salir">✕</button><h2>${n} ${n === 1 ? "elegido" : "elegidos"}</h2>${inF ? `<button class="tb" data-a="allF">${all ? "Ninguno" : "Todo"}</button>` : ""}${inF ? `<button class="tb" data-a="back">Carpetas</button>` : ""}</div>`;
+  }
+  return `<div class="top">${view !== "home" ? `<button class="ib" data-a="back">←</button>` : ""}<h2>${view === "home" ? "Tansu" : view}</h2><button class="tb" data-a="enter">Seleccionar</button></div>`;
+}
+function actions() {
+  if (!selMode) return "";
+  const d = !sel.size ? "disabled" : "";
+  return `<div class="actions">
+    <button ${d} data-a="copy"><span class="i">⇪</span>Copiar a relays</button>
+    <button ${d} data-a="del" class="d"><span class="i">⇣</span>Borrar de relays</button>
+    <button ${d} data-a="noop"><span class="i">👤</span>Otra cuenta</button>
+    <button ${d} data-a="more"><span class="i">⋯</span>Más</button></div>`;
+}
+function relaySheet(kind) {
+  const c = chosen(), ok = c.filter(i => !i.plain), skipped = c.length - ok.length;
+  const rows = RELAYS.map((r, ri) => {
+    const has = c.filter(i => i.has.includes(ri)).length, miss = ok.filter(i => !i.has.includes(ri)).length;
+    const n = kind === "copy" ? miss : has, dis = n === 0;
+    const sub = kind === "copy" ? (miss ? `le faltan ${miss} de ${c.length}` : "ya los tiene todos") : (has ? `tiene ${has} de ${c.length}` : "no tiene ninguno");
+    return `<div class="rl ${dis ? "dis" : ""}" ${dis ? "" : `data-a="rsel" data-x="${ri}"`}><span class="cb ${rsel.has(ri) ? "on" : ""}">${rsel.has(ri) ? "✓" : ""}</span>
+      <span class="n"><b>${r.u}</b><span>${sub}</span></span>${stars(r.s)}</div>`;
+  }).join("");
+  let warn = "";
+  if (kind === "copy" && skipped) warn = `<div class="warn">⚠ ${skipped} sin cifrar no se copian: Tansu nunca reenvía datos legibles.</div>`;
+  if (kind === "copy" && rsel.has(3)) warn += `<div class="warn">⚠ relay.ejemplo.net tiene 1★ y ha perdido datos tuyos: no lo uses como única copia.</div>`;
+  if (kind === "del") {
+    const orphan = c.filter(i => i.has.length && i.has.every(x => rsel.has(x)));
+    if (orphan.length) warn = `<div class="warn d">⚠ ${orphan.length} ${orphan.length === 1 ? "dato se quedaría" : "datos se quedarían"} sin ninguna copia en relays (p. ej. ${orphan[0].id}). Se guarda una copia cifrada en la papelera.</div>`;
+  }
+  const tgt = [...rsel].map(i => RELAYS[i]);
+  const work = kind === "copy" ? tgt.reduce((a, r) => a + ok.filter(i => !i.has.includes(RELAYS.indexOf(r))).length, 0) : tgt.reduce((a, r) => a + c.filter(i => i.has.includes(RELAYS.indexOf(r))).length, 0);
+  const summary = !tgt.length ? "Elige uno o varios relays" : kind === "copy"
+    ? `${work} copias en ${tgt.length} ${tgt.length === 1 ? "relay" : "relays"}`
+    : `${work} borrados en ${tgt.length} ${tgt.length === 1 ? "relay" : "relays"} · se firma una petición NIP-09 por relay`;
+  return `<div class="shade" data-a="shade"><div class="sheet"><div class="body">
+    <h3>${kind === "copy" ? "Copiar a relays" : "Borrar de relays"}</h3><div class="sum">${c.length} ${c.length === 1 ? "dato elegido" : "datos elegidos"} · ${fmt(c.reduce((a, i) => a + i.kb, 0))}</div>
+    <div style="margin-top:10px">${rows}</div>
+    ${kind === "copy" ? `<button class="link" data-a="noop">+ Otro relay…</button>` : ""}
+    ${warn}</div>
+    <div class="bar"><div class="sum">${summary}</div>
+    <button class="btn ${kind === "copy" ? "p" : "dg"}" ${tgt.length && work ? "" : "disabled"} data-a="${kind === "copy" ? "goCopy" : "confirmDel"}">${kind === "copy" ? `Copiar a ${tgt.length || ""} ${tgt.length === 1 ? "relay" : "relays"}` : `Borrar de ${tgt.length || ""} ${tgt.length === 1 ? "relay" : "relays"}…`}</button></div></div></div>`;
+}
+function confirmDel() {
+  const tgt = [...rsel].map(i => RELAYS[i].u), c = chosen();
+  return `<div class="shade" data-a="shade"><div class="sheet"><div class="body"><h3>¿Borrar ${c.length} ${c.length === 1 ? "dato" : "datos"}?</h3>
+    <p class="sum">De: ${tgt.join(", ")}. Algunos relays no hacen caso de las peticiones de borrado (NIP-09); lo verás en el resultado.</p></div>
+    <div class="bar"><button class="btn dg" data-a="goDel">Borrar</button><button class="btn" data-a="cancel">Cancelar</button></div></div></div>`;
+}
+function progress() {
+  const p = op;
+  return `<div class="shade"><div class="sheet"><div class="body"><h3>${p.done === p.total ? "Resultado" : p.kind === "copy" ? "Copiando…" : "Borrando…"}</h3>
+    <div class="prog"><i style="width:${Math.round(p.done / p.total * 100)}%"></i></div><div class="sum">${p.done} de ${p.total}</div>
+    ${p.done === p.total ? `<div class="res">${p.res.map(r => `<div>${r}</div>`).join("")}</div>` : ""}</div>
+    <div class="bar">${p.done === p.total ? `<button class="btn p" data-a="finish">Hecho</button>` : `<button class="btn" data-a="noop">Cancelar</button>`}</div></div></div>`;
+}
+function more() {
+  return `<div class="shade" data-a="shade"><div class="sheet"><div class="body"><h3>Más acciones</h3><div class="sum">${sel.size} elegidos</div>
+    <button class="btn" data-a="noop">Exportar (JSON descifrado, en este dispositivo)</button>
+    <button class="btn" data-a="noop" style="color:var(--danger)">Borrar de todos los relays (a la papelera)</button></div>
+    <div class="bar"><button class="btn" data-a="cancel">Cerrar</button></div></div></div>`;
+}
+function render() {
+  $("#scr").innerHTML = topBar() + (view === "home" ? home() : folder(view));
+  $("#act").innerHTML = actions();
+  $("#layer").innerHTML = layer === "copy" || layer === "del" ? relaySheet(layer) : layer === "confirm" ? confirmDel() : layer === "prog" ? progress() : layer === "more" ? more() : "";
+}
+function toast(t) { $("#toast").innerHTML = `<div class="toast">${t}</div>`; setTimeout(() => $("#toast").innerHTML = "", 2000); }
+function run(kind) {
+  const c = chosen().filter(i => kind === "del" || !i.plain), tgt = [...rsel];
+  const jobs = tgt.flatMap(ri => c.filter(i => kind === "copy" ? !i.has.includes(ri) : i.has.includes(ri)).map(i => [ri, i]));
+  op = { kind, total: jobs.length, done: 0, res: [] }; layer = "prog"; render();
+  const t = setInterval(() => {
+    op.done = Math.min(op.total, op.done + Math.max(1, Math.ceil(op.total / 10)));
+    if (op.done === op.total) {
+      clearInterval(t);
+      op.res = tgt.map(ri => {
+        const n = jobs.filter(j => j[0] === ri).length, r = RELAYS[ri].u;
+        if (kind === "copy" && ri === 3) return `<span style="color:var(--lock)">⚠ ${r}: ${n - 2} copiados, 2 rechazados («rate-limited»)</span>`;
+        if (kind === "del" && ri === 3) return `<span style="color:var(--lock)">⚠ ${r}: no ha hecho caso del borrado (sigue teniendo ${n})</span>`;
+        return `✓ ${r}: ${n} ${kind === "copy" ? "copiados" : "borrados"}`;
+      });
+      jobs.forEach(([ri, i]) => { if (ri === 3) return; kind === "copy" ? i.has.includes(ri) || i.has.push(ri) : i.has = i.has.filter(x => x !== ri); });
+      ALL.forEach(a => { const o = F.flatMap(g => g.items).find(x => x.id === a.id); a.has = o.has; });
+    }
+    render();
+  }, 180);
+}
+const A = {
+  tapF: x => { if (selMode) { const ids = F.find(g => g.f === x).items.map(i => i.id), all = ids.every(i => sel.has(i)); ids.forEach(i => all ? sel.delete(i) : sel.add(i)); } else view = x; render(); },
+  tapI: x => { if (selMode) { sel.has(x) ? sel.delete(x) : sel.add(x); render(); } else toast("Abre el dato (como ahora)"); },
+  enter: () => { selMode = true; render(); },
+  exit: () => { selMode = false; sel.clear(); render(); },
+  back: () => { view = "home"; render(); },
+  allF: () => { const g = F.find(x => x.f === view), all = g.items.every(i => sel.has(i.id)); g.items.forEach(i => all ? sel.delete(i.id) : sel.add(i.id)); render(); },
+  copy: () => { layer = "copy"; const c = chosen().filter(i => !i.plain); rsel = new Set(RELAYS.map((_, ri) => ri).filter(ri => ri !== 3 && c.some(i => !i.has.includes(ri)))); render(); },
+  del: () => { layer = "del"; rsel = new Set(); render(); },
+  more: () => { layer = "more"; render(); },
+  rsel: x => { x = +x; rsel.has(x) ? rsel.delete(x) : rsel.add(x); render(); },
+  goCopy: () => run("copy"), confirmDel: () => { layer = "confirm"; render(); }, goDel: () => run("del"),
+  cancel: () => { layer = null; render(); }, finish: () => { layer = null; selMode = false; sel.clear(); render(); },
+  shade: (x, el, ev) => { if (ev.target === el) { layer = null; render(); } },
+  noop: () => toast("(no incluido en la demo)"),
+};
+let pressT = null;
+document.addEventListener("pointerdown", ev => {
+  const el = ev.target.closest("[data-a=tapF],[data-a=tapI]"); if (!el || selMode) return;
+  pressT = setTimeout(() => { pressT = "fired"; selMode = true; const x = el.dataset.x; el.dataset.a === "tapF" ? A.tapF(x) : A.tapI(x); }, 450);
+});
+document.addEventListener("pointerup", () => { if (pressT && pressT !== "fired") clearTimeout(pressT); });
+document.addEventListener("click", ev => {
+  if (pressT === "fired") { pressT = null; return; }
+  pressT = null;
+  const el = ev.target.closest("[data-a]"); if (!el || el.disabled) return;
+  A[el.dataset.a]?.(el.dataset.x, el, ev);
+});
+render();
+</script>
+</body>
+</html>

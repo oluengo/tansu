@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.8] (beta)
+
+- Group operations. Long-press an item or a whole folder (or tap the select button) to choose several items; the selection is kept while moving between folders, and "All" / "None" select a whole folder.
+- Copy to relays: choose one or more relays; each says how many of the chosen items it is missing, and the ones that responded and are missing something come preselected (except relays rated 1–2★). Unencrypted items are skipped, as always.
+- Delete from relays: each relay says how many it has; nothing is preselected ("Delete from all relays…" in More selects them all). One NIP-09 request per relay (in batches of 50 items), with a confirmation first and a warning when items would be left with no copy on any relay — those go to the trash first, encrypted as they were.
+- Result per relay: copied or deleted, rejected (with the relay's own reason) and relays that ignored the deletion.
+- Copy several app items to another account at once.
+- Web: list addresses now follow NIP-01 ("kind:pubkey:" with the trailing colon), so deletion requests for lists match on every relay.
+
 ## [0.3.7]
 
 First stable release. It brings together everything tested in the betas (0.1.0 to 0.3.6, below):

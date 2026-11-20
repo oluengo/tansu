@@ -46,7 +46,7 @@ const FAKE = `;(function(){
   const load = () => JSON.parse(localStorage.getItem("__relays") || "{}");
   const save = s => localStorage.setItem("__relays", JSON.stringify(s));
   const dTag = e => (e.tags.find(t => t[0] === "d") || [])[1] || "";
-  const addr = e => e.kind >= 30000 ? e.kind + ":" + e.pubkey + ":" + dTag(e) : "";
+  const addr = e => e.kind + ":" + e.pubkey + ":" + (e.kind >= 30000 ? dTag(e) : "");
   const match = (e, f) => (!f.kinds || f.kinds.includes(e.kind)) && (!f.authors || f.authors.includes(e.pubkey));
   const at = (s, url) => (s[url] ||= JSON.parse(localStorage.getItem("__seed") || "[]").filter(e => !(url === "wss://nos.lol" && dTag(e) === "wavestr/favorites")));
   window.__published = [];
@@ -58,7 +58,7 @@ const FAKE = `;(function(){
       for (const u of relays) {
         if (DOWN.includes(u)) continue;
         const l = at(s, u);
-        if (e.kind === 5) { const as = e.tags.filter(t => t[0] === "a").map(t => t[1]); for (let i = l.length - 1; i >= 0; i--) if (as.includes(addr(l[i])) && l[i].created_at <= e.created_at) l.splice(i, 1); }
+        if (e.kind === 5) { const as = e.tags.filter(t => t[0] === "a").map(t => t[1]), es = e.tags.filter(t => t[0] === "e").map(t => t[1]); for (let i = l.length - 1; i >= 0; i--) if (es.includes(l[i].id) || (as.includes(addr(l[i])) && l[i].created_at <= e.created_at)) l.splice(i, 1); }
         if (!l.some(x => x.id === e.id)) l.push(e); n++;
       }
       save(s); window.__published.push(e); return n;
@@ -244,8 +244,42 @@ try {
   ok(JSON.stringify(L.tags) === JSON.stringify([["p", "aa".repeat(32)]]), "lo público solo se quita (spam pasa a privado)");
   ok(JSON.stringify(JSON.parse(dec(L.content)).map(String).sort()) === JSON.stringify([["word", "airdrop"], ["t", "spam"], ["word", "scam"]].map(String).sort()), "parte privada cifrada con lo nuevo");
 
-  // Papelera y restaurar
+  // Operaciones en grupo: elegir una carpeta entera y una lista, borrar de nos.lol, copiar de vuelta
   await page.click("button[aria-label='Volver']"); await page.click("button[aria-label='Volver']");
+  await page.click("button[aria-label='Seleccionar']");
+  ok(await page.locator(".gbar").count() === 1 && await page.locator(".gbar button:has-text('Copiar a relays')").isDisabled(), "modo selección: barra de acciones (desactivada sin nada elegido)");
+  await page.click(".rowmain:has-text('Wavestr')");
+  await page.click("div.row:has-text('Listas') .chev");
+  await page.click(".row:has-text('Silenciados')");
+  ok((await page.locator(".top h1").textContent()).trim() === "2 elegidos", "carpeta entera + una lista: 2 elegidos");
+  await page.click("button[aria-label='Volver']");
+  ok((await page.locator(".rowmain:has-text('Wavestr')").textContent()).includes("1 elegidos") && await page.locator(".rowmain:has-text('Wavestr') .cb.on").count() === 1, "la selección se mantiene al volver");
+  await page.click(".gbar button:has-text('Borrar de relays')");
+  ok(await page.locator(".grow.on").count() === 0 && await page.locator(".pk-bar button").isDisabled(), "borrar: ningún relay marcado de entrada");
+  await page.click(".grow:has-text('nos.lol')");
+  ok((await page.locator(".grow:has-text('nos.lol')").textContent()).includes("tiene 2 de 2"), "nos.lol tiene los 2");
+  await page.click(".pk-bar button:has-text('Borrar de 1 relay')");
+  ok((await page.locator(".dialog").textContent()).includes("¿Borrar 2 datos?"), "pide confirmar el borrado en grupo");
+  await page.click(".dialog button:text('Eliminar')");
+  await page.waitForSelector(".gres"); await idle(page);
+  ok((await page.locator(".gres").textContent()).includes("nos.lol: 2 borrados"), "resultado: 2 borrados en nos.lol");
+  ok(await page.evaluate(() => { const s = JSON.parse(localStorage.getItem("__relays")); const n = s["wss://nos.lol"] || [], d = s["wss://relay.damus.io"] || []; return !n.some(e => e.kind === 10000 || (e.kind === 30078 && e.tags[0][1] === "wavestr/favorites")) && d.some(e => e.kind === 10000); }), "borrado solo de nos.lol (damus los conserva)");
+  await page.click(".dialog button:text('Hecho')");
+  ok(await page.locator(".gbar").count() === 0, "al terminar sale del modo selección");
+  // Copiar en grupo: vienen marcados los relays a los que les falta algo
+  await page.locator(".row", { hasText: "Wavestr" }).first().dispatchEvent("pointerdown");
+  await page.waitForTimeout(650);
+  await page.locator(".row", { hasText: "Wavestr" }).first().dispatchEvent("pointerup");
+  ok(await page.locator(".gbar").count() === 1 && (await page.locator(".top h1").textContent()).trim() === "1 elegido", "mantener pulsado una carpeta la elige");
+  await page.click(".gbar button:has-text('Copiar a relays')");
+  ok(await page.locator(".grow.on:has-text('nos.lol')").count() === 1 && (await page.locator(".grow:has-text('relay.damus.io')").textContent()).includes("ya los tiene todos"), "copiar: nos.lol marcado (le falta), damus ya lo tiene");
+  await page.screenshot({ path: "/tmp/web-grupo.png" });
+  await page.click(".pk-bar button:has-text('Copiar a 1 relay')");
+  await page.waitForSelector(".gres"); await idle(page);
+  ok((await page.locator(".gres").textContent()).includes("nos.lol: 1 copiados"), "resultado: copiado a nos.lol");
+  await page.click(".dialog button:text('Hecho')");
+
+  // Papelera y restaurar
   await page.click("button[aria-label='Ajustes']");
   await page.click("text=Papelera");
   ok(await page.locator("text=otra/ajustes").count() === 1, "copia local en la papelera");

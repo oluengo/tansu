@@ -291,6 +291,37 @@
     <string name="rel_answered">%1$s ha respost</string>
     <string name="rel_lost_short">n\'ha perdut %1$d</string>
     <string name="rel_stars">%1$d de 5 estrelles</string>
+    <string name="sel_start">Selecciona</string>
+    <string name="sel_all">Tot</string>
+    <string name="sel_none">Cap</string>
+    <string name="sel_exit">Surt de la selecció</string>
+    <string name="sel_hint_home">Marca una carpeta per triar-ne totes les dades, o entra-hi per triar-ne algunes.</string>
+    <string name="g_copy">Copia a relays</string>
+    <string name="g_delete">Esborra de relays</string>
+    <string name="g_account">Un altre compte</string>
+    <string name="g_more">Més</string>
+    <string name="g_select_everything">Selecciona-ho tot</string>
+    <string name="g_delete_all">Esborra de tots els relays…</string>
+    <string name="g_missing">li\'n falten %1$d de %2$d</string>
+    <string name="g_all_there">ja les té totes</string>
+    <string name="g_has">en té %1$d de %2$d</string>
+    <string name="g_has_none">no en té cap</string>
+    <string name="g_unknown">no ha respost: no se sap</string>
+    <string name="g_other">+ Un altre relay…</string>
+    <string name="g_w_low">%1$s té %2$d★: no el facis servir com a única còpia.</string>
+    <string name="g_pick_relays">Tria un o més relays</string>
+    <string name="g_copy_sum">%1$d còpies a %2$s</string>
+    <string name="g_del_sum">%1$d esborrats a %2$s · una petició NIP-09 per relay</string>
+    <string name="g_copy_go">Copia a %1$s</string>
+    <string name="g_del_go">Esborra de %1$s…</string>
+    <string name="g_del_body">De: %1$s. Alguns relays no fan cas de les peticions d\'esborrat (NIP-09); ho veuràs al resultat.</string>
+    <string name="g_result">Resultat</string>
+    <string name="g_r_copied">%1$s: %2$d copiades</string>
+    <string name="g_r_deleted">%1$s: %2$d esborrades</string>
+    <string name="g_r_failed">%1$d rebutjades</string>
+    <string name="g_r_ignored">no ha fet cas de l\'esborrat (encara en té %1$d)</string>
+    <string name="g_readonly">Compte només de lectura: no pot signar esborrats.</string>
+    <string name="g_done">Fet</string>
     <string name="credits_title">Crèdits</string>
     <string name="credits_nostrich">Icona de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Lliure i de codi obert; vectoritzat per a la icona de Tansu</string>
@@ -356,6 +387,42 @@
     <plurals name="pk_events">
         <item quantity="one">%d esdeveniment</item>
         <item quantity="other">%d esdeveniments</item>
+    </plurals>
+    <plurals name="sel_count">
+        <item quantity="one">%d triat</item>
+        <item quantity="other">%d triats</item>
+    </plurals>
+    <plurals name="g_relays">
+        <item quantity="one">%d relay</item>
+        <item quantity="other">%d relays</item>
+    </plurals>
+    <plurals name="g_w_plain">
+        <item quantity="one">%d sense xifrar no es copia: Tansu mai no reenvia dades llegibles.</item>
+        <item quantity="other">%d sense xifrar no es copien: Tansu mai no reenvia dades llegibles.</item>
+    </plurals>
+    <plurals name="g_w_orphan">
+        <item quantity="one">%d dada es quedaria sense cap còpia als relays. Se\'n desa una còpia xifrada a la paperera.</item>
+        <item quantity="other">%d dades es quedarien sense cap còpia als relays. Se\'n desa una còpia xifrada a la paperera.</item>
+    </plurals>
+    <plurals name="g_del_title">
+        <item quantity="one">Vols esborrar %d dada?</item>
+        <item quantity="other">Vols esborrar %d dades?</item>
+    </plurals>
+    <plurals name="g_r_skipped">
+        <item quantity="one">%d sense xifrar omesa</item>
+        <item quantity="other">%d sense xifrar omeses</item>
+    </plurals>
+    <plurals name="g_acc_note">
+        <item quantity="one">%d llista no es copia a un altre compte (només dades d\'apps).</item>
+        <item quantity="other">%d llistes no es copien a un altre compte (només dades d\'apps).</item>
+    </plurals>
+    <plurals name="g_acc_body">
+        <item quantity="one">%d dada es torna a xifrar per a aquest compte. Si ja en té una amb el mateix nom, es reemplaça.</item>
+        <item quantity="other">%d dades es tornen a xifrar per a aquest compte. Si ja en té alguna amb el mateix nom, es reemplaça.</item>
+    </plurals>
+    <plurals name="g_acc_done">
+        <item quantity="one">Copiada %d dada.</item>
+        <item quantity="other">Copiades %d dades.</item>
     </plurals>
     <plurals name="relays_count">
         <item quantity="one">%d relay de Tansu</item>
