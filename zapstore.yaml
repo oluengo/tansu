@@ -1,0 +1,47 @@
+# Zapstore (store on Nostr). Publishes the APK of each GitHub Release (tags vX.Y.Z, not the beta).
+# Publish: `zsp publish` (check first with `zsp check`) with SIGN_WITH=bunker://… in the environment.
+# Never store the nsec key here or in the repository.
+# Icon, screenshots and release notes are URLs, so zsp works from any folder (after pushing to main).
+# Release notes: the CHANGELOG.md section "## [X.Y.Z]" (Keep a Changelog headings).
+repository: https://github.com/oluengo/tansu
+release_filter: ^v\d+\.\d+\.\d+$
+match: ^tansu-\d+\.\d+\.\d+\.apk$
+metadata_sources: []
+
+name: Tansu
+summary: Your private Nostr data, in folders.
+description: |
+  Tansu is an explorer for what your Nostr apps keep in your account: backups and settings (NIP-78) and your lists (NIP-51). See it, edit it and move it between accounts, always encrypted. Several accounts at once. Free, no ads. In English, Spanish and Catalan.
+
+  **What it does**
+
+  - **A folder per app:** Wavestr, Usus, Mado… grouped automatically by the `d` tag prefix.
+  - **Several accounts** (Amber, bunker or npub) and quick switching.
+  - **Backups in parts** (Usus format) are shown as a single file.
+  - **Decrypt, view and edit** (validated JSON), **export to a file**, **copy to another account** (re-encrypted for it) and **delete** (NIP-09).
+  - **Local trash:** before deleting or overwriting, an encrypted copy is kept so you can restore it.
+  - **NIP-51 lists:** view (including the private part) and edit. Anything new always goes to the private, encrypted part.
+  - **Where each item lives:** its state on every relay, copy it to the relays missing it and delete it from a single relay.
+  - **Relays:** info sheets (NIP-11), a full list with filters and reliability with 1–5 stars. A relay that lost your data is flagged.
+
+  **Privacy**
+
+  - Never publishes anything readable: everything Tansu writes is encrypted with NIP-44 for the account itself.
+  - Never sees your nsec: Amber (NIP-55) or a bunker (NIP-46) sign and encrypt.
+  - Decrypted content only lives in memory while the app is open. No servers of its own, no trackers: just your relays.
+
+  Also in the browser: https://oluengo.github.io/tansu/app/
+
+  Built with AI · tested by humans.
+license: MIT
+website: https://oluengo.github.io/tansu/
+tags: [nostr, backup, privacy, files, encryption, tools]
+supported_nips: ["09", "11", "19", "44", "46", "51", "55", "65", "66", "78"]
+
+icon: https://raw.githubusercontent.com/oluengo/tansu/main/docs/brand/tansu-icon.png
+images:
+  - https://raw.githubusercontent.com/oluengo/tansu/main/site/img/shots/01-home.jpg
+  - https://raw.githubusercontent.com/oluengo/tansu/main/site/img/shots/02-relays-per-item.jpg
+  - https://raw.githubusercontent.com/oluengo/tansu/main/site/img/shots/03-visual.jpg
+  - https://raw.githubusercontent.com/oluengo/tansu/main/site/img/shots/04-relay-list.jpg
+release_notes: https://raw.githubusercontent.com/oluengo/tansu/main/CHANGELOG.md

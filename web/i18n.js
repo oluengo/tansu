@@ -293,6 +293,37 @@ window.TANSU_I18N = {
 "rel_answered": "%1$s answered",
 "rel_lost_short": "lost %1$d",
 "rel_stars": "%1$d of 5 stars",
+"sel_start": "Select",
+"sel_all": "All",
+"sel_none": "None",
+"sel_exit": "Cancel selection",
+"sel_hint_home": "Tick a folder to choose all its items, or open it to choose some.",
+"g_copy": "Copy to relays",
+"g_delete": "Delete from relays",
+"g_account": "Other account",
+"g_more": "More",
+"g_select_everything": "Select everything",
+"g_delete_all": "Delete from all relays…",
+"g_missing": "%1$d of %2$d missing",
+"g_all_there": "already has them all",
+"g_has": "has %1$d of %2$d",
+"g_has_none": "has none",
+"g_unknown": "did not answer: unknown",
+"g_other": "+ Other relay…",
+"g_w_low": "%1$s is rated %2$d★: do not use it as your only copy.",
+"g_pick_relays": "Choose one or more relays",
+"g_copy_sum": "%1$d copies to %2$s",
+"g_del_sum": "%1$d deletions on %2$s · one NIP-09 request per relay",
+"g_copy_go": "Copy to %1$s",
+"g_del_go": "Delete from %1$s…",
+"g_del_body": "From: %1$s. Some relays ignore deletion requests (NIP-09); you will see it in the result.",
+"g_result": "Result",
+"g_r_copied": "%1$s: %2$d copied",
+"g_r_deleted": "%1$s: %2$d deleted",
+"g_r_failed": "%1$d rejected",
+"g_r_ignored": "ignored the deletion (still has %1$d)",
+"g_readonly": "Read-only account: it cannot sign deletions.",
+"g_done": "Done",
 "credits_title": "Credits",
 "credits_nostrich": "Nostr icon: Purple Nostrich by SovrynMatt",
 "credits_nostrich_sub": "Free and open source; vectorized for the Tansu icon",
@@ -628,6 +659,37 @@ window.TANSU_I18N = {
 "rel_answered": "%1$s respondió",
 "rel_lost_short": "perdió %1$d",
 "rel_stars": "%1$d de 5 estrellas",
+"sel_start": "Seleccionar",
+"sel_all": "Todo",
+"sel_none": "Ninguno",
+"sel_exit": "Salir de la selección",
+"sel_hint_home": "Marca una carpeta para elegir todos sus datos, o entra para elegir algunos.",
+"g_copy": "Copiar a relays",
+"g_delete": "Borrar de relays",
+"g_account": "Otra cuenta",
+"g_more": "Más",
+"g_select_everything": "Seleccionar todo",
+"g_delete_all": "Borrar de todos los relays…",
+"g_missing": "le faltan %1$d de %2$d",
+"g_all_there": "ya los tiene todos",
+"g_has": "tiene %1$d de %2$d",
+"g_has_none": "no tiene ninguno",
+"g_unknown": "no respondió: no se sabe",
+"g_other": "+ Otro relay…",
+"g_w_low": "%1$s tiene %2$d★: no lo uses como única copia.",
+"g_pick_relays": "Elige uno o varios relays",
+"g_copy_sum": "%1$d copias en %2$s",
+"g_del_sum": "%1$d borrados en %2$s · una petición NIP-09 por relay",
+"g_copy_go": "Copiar a %1$s",
+"g_del_go": "Borrar de %1$s…",
+"g_del_body": "De: %1$s. Algunos relays no hacen caso de las peticiones de borrado (NIP-09); lo verás en el resultado.",
+"g_result": "Resultado",
+"g_r_copied": "%1$s: %2$d copiados",
+"g_r_deleted": "%1$s: %2$d borrados",
+"g_r_failed": "%1$d rechazados",
+"g_r_ignored": "no ha hecho caso del borrado (sigue teniendo %1$d)",
+"g_readonly": "Cuenta solo de lectura: no puede firmar borrados.",
+"g_done": "Hecho",
 "credits_title": "Créditos",
 "credits_nostrich": "Icono de Nostr: Purple Nostrich de SovrynMatt",
 "credits_nostrich_sub": "Libre y de código abierto; vectorizado para el icono de Tansu",
@@ -963,6 +1025,37 @@ window.TANSU_I18N = {
 "rel_answered": "%1$s ha respost",
 "rel_lost_short": "n'ha perdut %1$d",
 "rel_stars": "%1$d de 5 estrelles",
+"sel_start": "Selecciona",
+"sel_all": "Tot",
+"sel_none": "Cap",
+"sel_exit": "Surt de la selecció",
+"sel_hint_home": "Marca una carpeta per triar-ne totes les dades, o entra-hi per triar-ne algunes.",
+"g_copy": "Copia a relays",
+"g_delete": "Esborra de relays",
+"g_account": "Un altre compte",
+"g_more": "Més",
+"g_select_everything": "Selecciona-ho tot",
+"g_delete_all": "Esborra de tots els relays…",
+"g_missing": "li'n falten %1$d de %2$d",
+"g_all_there": "ja les té totes",
+"g_has": "en té %1$d de %2$d",
+"g_has_none": "no en té cap",
+"g_unknown": "no ha respost: no se sap",
+"g_other": "+ Un altre relay…",
+"g_w_low": "%1$s té %2$d★: no el facis servir com a única còpia.",
+"g_pick_relays": "Tria un o més relays",
+"g_copy_sum": "%1$d còpies a %2$s",
+"g_del_sum": "%1$d esborrats a %2$s · una petició NIP-09 per relay",
+"g_copy_go": "Copia a %1$s",
+"g_del_go": "Esborra de %1$s…",
+"g_del_body": "De: %1$s. Alguns relays no fan cas de les peticions d'esborrat (NIP-09); ho veuràs al resultat.",
+"g_result": "Resultat",
+"g_r_copied": "%1$s: %2$d copiades",
+"g_r_deleted": "%1$s: %2$d esborrades",
+"g_r_failed": "%1$d rebutjades",
+"g_r_ignored": "no ha fet cas de l'esborrat (encara en té %1$d)",
+"g_readonly": "Compte només de lectura: no pot signar esborrats.",
+"g_done": "Fet",
 "credits_title": "Crèdits",
 "credits_nostrich": "Icona de Nostr: Purple Nostrich de SovrynMatt",
 "credits_nostrich_sub": "Lliure i de codi obert; vectoritzat per a la icona de Tansu",
@@ -1049,6 +1142,42 @@ window.TANSU_I18N = {
 "%d event",
 "%d events"
 ],
+"sel_count": [
+"%d selected",
+"%d selected"
+],
+"g_relays": [
+"%d relay",
+"%d relays"
+],
+"g_w_plain": [
+"%d not encrypted is skipped: Tansu never resends readable data.",
+"%d not encrypted are skipped: Tansu never resends readable data."
+],
+"g_w_orphan": [
+"%d item would be left with no copy on any relay. An encrypted copy goes to the trash.",
+"%d items would be left with no copy on any relay. An encrypted copy goes to the trash."
+],
+"g_del_title": [
+"Delete %d item?",
+"Delete %d items?"
+],
+"g_r_skipped": [
+"%d not encrypted skipped",
+"%d not encrypted skipped"
+],
+"g_acc_note": [
+"%d list is not copied to another account (only app data).",
+"%d lists are not copied to another account (only app data)."
+],
+"g_acc_body": [
+"%d item is encrypted again for that account. If it already has one with the same name, it is replaced.",
+"%d items are encrypted again for that account. If it already has one with the same name, it is replaced."
+],
+"g_acc_done": [
+"Copied %d item.",
+"Copied %d items."
+],
 "relays_count": [
 "%d Tansu relay",
 "%d Tansu relays"
@@ -1103,6 +1232,42 @@ window.TANSU_I18N = {
 "%d evento",
 "%d eventos"
 ],
+"sel_count": [
+"%d elegido",
+"%d elegidos"
+],
+"g_relays": [
+"%d relay",
+"%d relays"
+],
+"g_w_plain": [
+"%d sin cifrar no se copia: Tansu nunca reenvía datos legibles.",
+"%d sin cifrar no se copian: Tansu nunca reenvía datos legibles."
+],
+"g_w_orphan": [
+"%d dato se quedaría sin ninguna copia en relays. Se guarda una copia cifrada en la papelera.",
+"%d datos se quedarían sin ninguna copia en relays. Se guarda una copia cifrada en la papelera."
+],
+"g_del_title": [
+"¿Borrar %d dato?",
+"¿Borrar %d datos?"
+],
+"g_r_skipped": [
+"%d sin cifrar saltado",
+"%d sin cifrar saltados"
+],
+"g_acc_note": [
+"%d lista no se copia a otra cuenta (solo datos de apps).",
+"%d listas no se copian a otra cuenta (solo datos de apps)."
+],
+"g_acc_body": [
+"%d dato se vuelve a cifrar para esa cuenta. Si ya tiene uno con el mismo nombre, se reemplaza.",
+"%d datos se vuelven a cifrar para esa cuenta. Si ya tiene alguno con el mismo nombre, se reemplaza."
+],
+"g_acc_done": [
+"Copiado %d dato.",
+"Copiados %d datos."
+],
 "relays_count": [
 "%d relay de Tansu",
 "%d relays de Tansu"
@@ -1156,6 +1321,42 @@ window.TANSU_I18N = {
 "pk_events": [
 "%d esdeveniment",
 "%d esdeveniments"
+],
+"sel_count": [
+"%d triat",
+"%d triats"
+],
+"g_relays": [
+"%d relay",
+"%d relays"
+],
+"g_w_plain": [
+"%d sense xifrar no es copia: Tansu mai no reenvia dades llegibles.",
+"%d sense xifrar no es copien: Tansu mai no reenvia dades llegibles."
+],
+"g_w_orphan": [
+"%d dada es quedaria sense cap còpia als relays. Se'n desa una còpia xifrada a la paperera.",
+"%d dades es quedarien sense cap còpia als relays. Se'n desa una còpia xifrada a la paperera."
+],
+"g_del_title": [
+"Vols esborrar %d dada?",
+"Vols esborrar %d dades?"
+],
+"g_r_skipped": [
+"%d sense xifrar omesa",
+"%d sense xifrar omeses"
+],
+"g_acc_note": [
+"%d llista no es copia a un altre compte (només dades d'apps).",
+"%d llistes no es copien a un altre compte (només dades d'apps)."
+],
+"g_acc_body": [
+"%d dada es torna a xifrar per a aquest compte. Si ja en té una amb el mateix nom, es reemplaça.",
+"%d dades es tornen a xifrar per a aquest compte. Si ja en té alguna amb el mateix nom, es reemplaça."
+],
+"g_acc_done": [
+"Copiada %d dada.",
+"Copiades %d dades."
 ],
 "relays_count": [
 "%d relay de Tansu",

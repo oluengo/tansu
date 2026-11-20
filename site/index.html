@@ -75,6 +75,8 @@ code { font: .86em var(--mono); background: var(--accent-bg); padding: .1rem .35
 .mock .badge { font-size: .68rem; font-weight: 600; padding: .15rem .5rem; border-radius: 99px; background: light-dark(#FFF4E6, #33261A); color: light-dark(#B5651D, #F0A65A); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+.grid.feats { grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); }
+@media (min-width: 60rem) { .grid.feats { grid-template-columns: repeat(4, 1fr); } }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1.3rem; }
 .card h3 { font-size: 1.08rem; margin: .7rem 0 .35rem; }
 .card p { margin: 0; color: var(--muted); font-size: .96rem; }
@@ -96,6 +98,23 @@ footer a { color: var(--muted); }
 .chip:hover { border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); text-decoration: none; }
 
 .top nav .nl.more { display: inline-flex; white-space: nowrap; }
+.acts { display: flex; flex-wrap: wrap; gap: .5rem; }
+.opts { list-style: none; padding-left: 0 !important; margin: .6rem 0 1.2rem; }
+.opts li { position: relative; padding-left: 2.1rem; margin: .55rem 0; }
+.opts .opt-logo { position: absolute; left: 0; top: .05rem; width: 1.5rem; height: 1.5rem; border-radius: .38rem; }
+.opts .opt-logo.dl { padding: .2rem; border: 1px solid currentColor; opacity: .7; box-sizing: border-box; }
+.btn img.logo { width: 1.3rem; height: 1.3rem; border-radius: .32rem; flex: none; }
+.btn svg.dlb, .btn svg.glb { width: 1.15rem; height: 1.15rem; flex: none; }
+.avail { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .9rem; margin-top: 1.1rem; font-size: .88rem; }
+.avail span { opacity: .65; }
+.avail a { display: inline-flex; align-items: center; gap: .4rem; color: inherit; text-decoration: none; font-weight: 600; opacity: .9; }
+.avail a:hover { opacity: 1; text-decoration: underline; }
+.avail img, .avail svg { width: 1.15rem; height: 1.15rem; border-radius: .28rem; flex: none; }
+.shots { display: grid; gap: 1rem; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 52rem) { .shots { grid-template-columns: repeat(4, 1fr); } }
+.shots figure { margin: 0; }
+.shots img { width: 100%; height: auto; display: block; border-radius: 18px; border: 1px solid var(--line); background: var(--card, #fff); }
+.shots figcaption { margin-top: .55rem; font-size: .9rem; color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
@@ -122,8 +141,9 @@ footer a { color: var(--muted); }
 			<p data-i="hero_text"></p>
 			<div class="cta">
 				<a class="btn p" href="app/" data-i="open_web"></a>
-				<a class="btn" href="https://github.com/oluengo/tansu/releases" data-i="get_android"></a>
+				<a class="btn" href="#get" data-i="get_android"></a>
 			</div>
+			<div class="avail"><span>Available on</span><a href="https://zapstore.dev/apps/io.github.oluengo.tansu"><img src="img/zapstore.png" alt="">Zapstore</a><a href="https://github.com/ImranR98/Obtainium"><img src="img/obtainium.png" alt="">Obtainium</a><a href="app/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>Web</a></div>
 			<p class="small" style="margin-top:1rem" data-i="hero_note"></p>
 		</div>
 		<div class="mock" aria-hidden="true">
@@ -140,13 +160,26 @@ footer a { color: var(--muted); }
 	<section id="features">
 		<h2 data-i="f_title"></h2>
 		<p class="lead" data-i="f_lead"></p>
-		<div class="grid">
+		<div class="grid feats">
 			<div class="card"><div class="ic">📁</div><h3 data-i="f1_t"></h3><p data-i="f1_p"></p></div>
 			<div class="card"><div class="ic">👥</div><h3 data-i="f2_t"></h3><p data-i="f2_p"></p></div>
 			<div class="card"><div class="ic">✏️</div><h3 data-i="f3_t"></h3><p data-i="f3_p"></p></div>
 			<div class="card"><div class="ic">↔</div><h3 data-i="f4_t"></h3><p data-i="f4_p"></p></div>
 			<div class="card"><div class="ic">🗑</div><h3 data-i="f5_t"></h3><p data-i="f5_p"></p></div>
 			<div class="card"><div class="ic">☰</div><h3 data-i="f6_t"></h3><p data-i="f6_p"></p></div>
+			<div class="card"><div class="ic">📡</div><h3 data-i="f7_t"></h3><p data-i="f7_p"></p></div>
+			<div class="card"><div class="ic">★</div><h3 data-i="f8_t"></h3><p data-i="f8_p"></p></div>
+		</div>
+	</section>
+
+	<section id="shots">
+		<h2 data-i="s_title"></h2>
+		<p class="lead" data-i="s_lead"></p>
+		<div class="shots">
+			<figure><img src="img/shots/01-home.jpg" width="540" height="1170" loading="lazy" alt=""><figcaption data-i="s1"></figcaption></figure>
+			<figure><img src="img/shots/02-relays-per-item.jpg" width="540" height="1170" loading="lazy" alt=""><figcaption data-i="s2"></figcaption></figure>
+			<figure><img src="img/shots/03-visual.jpg" width="540" height="1170" loading="lazy" alt=""><figcaption data-i="s3"></figcaption></figure>
+			<figure><img src="img/shots/04-relay-list.jpg" width="540" height="1170" loading="lazy" alt=""><figcaption data-i="s4"></figcaption></figure>
 		</div>
 	</section>
 
@@ -167,14 +200,14 @@ footer a { color: var(--muted); }
 		<p class="lead" data-i="g_lead"></p>
 		<div class="grid">
 			<div class="card">
-				<div class="ic">🌐</div><h3 data-i="g_web_t"></h3><p data-i="g_web_p"></p>
-				<p style="margin-top:1rem"><a class="btn p" href="app/" data-i="open_web"></a></p>
-				<p class="small" style="margin-top:.6rem"><a href="beta/" data-i="g_web_beta"></a></p>
+				<div class="ic">🤖</div><h3 data-i="g_and_t"></h3><ol class="opts" data-i="g_and_p" data-html></ol>
+				<p style="margin-top:1rem" class="acts"><a class="btn p" href="https://zapstore.dev/apps/io.github.oluengo.tansu"><img class="logo" src="img/zapstore.png" alt="">Zapstore</a> <a class="btn" href="https://github.com/ImranR98/Obtainium"><img class="logo" src="img/obtainium.png" alt="">Obtainium</a> <a class="btn" href="https://github.com/oluengo/tansu/releases/latest"><svg class="dlb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span data-i="get_apk"></span></a></p>
+				<p class="small" style="margin-top:.6rem"><a href="https://github.com/oluengo/tansu/releases/tag/tansu-beta" data-i="g_and_beta"></a></p>
 			</div>
 			<div class="card">
-				<div class="ic">🤖</div><h3 data-i="g_and_t"></h3><p data-i="g_and_p" data-html></p>
-				<p style="margin-top:1rem"><a class="btn" href="https://github.com/oluengo/tansu/releases" data-i="get_android"></a></p>
-				<p class="small" style="margin-top:.6rem"><a href="https://github.com/oluengo/tansu/releases/tag/tansu-beta" data-i="g_and_beta"></a></p>
+				<div class="ic">🌐</div><h3 data-i="g_web_t"></h3><p data-i="g_web_p"></p>
+				<p style="margin-top:1rem"><a class="btn p" href="app/"><svg class="glb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><span data-i="open_web"></span></a></p>
+				<p class="small" style="margin-top:.6rem"><a href="beta/" data-i="g_web_beta"></a></p>
 			</div>
 		</div>
 		<h3 style="margin:2.2rem 0 .8rem" data-i="h_title"></h3>
@@ -212,7 +245,7 @@ const I = {
 	hero_title: { en: "Your private Nostr data, <span>in folders</span>" },
 	hero_text: { en: "Tansu is a file explorer for what your Nostr apps keep in your account: Wavestr favourites, Usus backups, settings and your lists. See it, edit it, move it between accounts. Always encrypted." },
 	open_web: { en: "Open in the browser" },
-	get_android: { en: "Android app" },
+	get_android: { en: "Get it on Android" },
 	hero_note: { en: "Built on Nostr · Free and open source · Android and web · English, Spanish, Catalan" },
 	m_apps: { en: "App data" },
 	m_wavestr: { en: "2 items · 5 min ago" },
@@ -235,18 +268,29 @@ const I = {
 	f5_p: { en: "Before deleting or overwriting, a local encrypted copy is kept so you can restore it." },
 	f6_t: { en: "Your lists (NIP-51)" },
 	f6_p: { en: "Muted, bookmarks, relays… including the private part. Anything new goes to the private, encrypted part." },
+	f7_t: { en: "Where your data lives" },
+	f7_p: { en: "See each item's state on every relay and copy it, already signed and encrypted, to the ones missing it. Or delete it from just one." },
+	f8_t: { en: "Relays you can trust" },
+	f8_p: { en: "Info sheets (NIP-11) and 1–5 stars from monitors, your own history and the people you follow. A relay that lost your data is flagged." },
+	s_title: { en: "Take a look" },
+	s_lead: { en: "The web app with sample data; the Android app looks the same. In English, Spanish and Catalan." },
+	s1: { en: "A folder per app" },
+	s2: { en: "Where each item lives" },
+	s3: { en: "Decrypted, in a visual view" },
+	s4: { en: "Relays you can trust" },
 	p_title: { en: "Private by design" },
 	p1: { en: "Nothing readable is ever published: everything Tansu writes is encrypted (NIP-44) for your own account." },
 	p2: { en: "It never sees your nsec. Amber, a browser extension or a bunker sign and encrypt for it." },
 	p3: { en: "Decrypted content only lives in memory while the app is open." },
 	p4: { en: "No servers of its own, no tracking: just your relays." },
 	g_title: { en: "Get Tansu" },
-	g_lead: { en: "The same app on Android and in the browser." },
+	g_lead: { en: "The same app on Android and in the browser. On Android, from Zapstore or GitHub, outside Google Play." },
 	g_web_t: { en: "Web" },
 	g_web_p: { en: "Nothing to install. Sign in with Amber (Android), a NIP-07 extension, a bunker or an npub. You can install it as an app (PWA) if you like." },
 	g_web_beta: { en: "Web beta →" },
 	g_and_t: { en: "Android" },
-	g_and_p: { en: "APK on GitHub. With <a href=\"https://github.com/ImranR98/Obtainium\">Obtainium</a> you get updates: add <code>github.com/oluengo/tansu</code>." },
+	g_and_p: { en: "<li><img class='opt-logo' src='img/zapstore.png' alt=''><b>Zapstore</b>: install Tansu from the Nostr app store. Updates arrive there.</li><li><img class='opt-logo' src='img/obtainium.png' alt=''><b>Obtainium</b>: add <code>github.com/oluengo/tansu</code> to get updates from GitHub.</li><li><svg class='opt-logo dl' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M12 4v11M7 10l5 5 5-5M5 20h14'/></svg><b>APK</b>: download it from the latest release and open it. Allow installing from that source if Android asks.</li>" },
+	get_apk: { en: "Download APK" },
 	g_and_beta: { en: "Tansu Beta (pre-release) →" },
 	h_title: { en: "How it works" },
 	h1: { en: "Add your account with Amber, an extension, a bunker or just an npub (read only)." },

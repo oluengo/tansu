@@ -291,6 +291,37 @@
     <string name="rel_answered">%1$s answered</string>
     <string name="rel_lost_short">lost %1$d</string>
     <string name="rel_stars">%1$d of 5 stars</string>
+    <string name="sel_start">Select</string>
+    <string name="sel_all">All</string>
+    <string name="sel_none">None</string>
+    <string name="sel_exit">Cancel selection</string>
+    <string name="sel_hint_home">Tick a folder to choose all its items, or open it to choose some.</string>
+    <string name="g_copy">Copy to relays</string>
+    <string name="g_delete">Delete from relays</string>
+    <string name="g_account">Other account</string>
+    <string name="g_more">More</string>
+    <string name="g_select_everything">Select everything</string>
+    <string name="g_delete_all">Delete from all relays…</string>
+    <string name="g_missing">%1$d of %2$d missing</string>
+    <string name="g_all_there">already has them all</string>
+    <string name="g_has">has %1$d of %2$d</string>
+    <string name="g_has_none">has none</string>
+    <string name="g_unknown">did not answer: unknown</string>
+    <string name="g_other">+ Other relay…</string>
+    <string name="g_w_low">%1$s is rated %2$d★: do not use it as your only copy.</string>
+    <string name="g_pick_relays">Choose one or more relays</string>
+    <string name="g_copy_sum">%1$d copies to %2$s</string>
+    <string name="g_del_sum">%1$d deletions on %2$s · one NIP-09 request per relay</string>
+    <string name="g_copy_go">Copy to %1$s</string>
+    <string name="g_del_go">Delete from %1$s…</string>
+    <string name="g_del_body">From: %1$s. Some relays ignore deletion requests (NIP-09); you will see it in the result.</string>
+    <string name="g_result">Result</string>
+    <string name="g_r_copied">%1$s: %2$d copied</string>
+    <string name="g_r_deleted">%1$s: %2$d deleted</string>
+    <string name="g_r_failed">%1$d rejected</string>
+    <string name="g_r_ignored">ignored the deletion (still has %1$d)</string>
+    <string name="g_readonly">Read-only account: it cannot sign deletions.</string>
+    <string name="g_done">Done</string>
     <string name="credits_title">Credits</string>
     <string name="credits_nostrich">Nostr icon: Purple Nostrich by SovrynMatt</string>
     <string name="credits_nostrich_sub">Free and open source; vectorized for the Tansu icon</string>
@@ -356,6 +387,42 @@
     <plurals name="pk_events">
         <item quantity="one">%d event</item>
         <item quantity="other">%d events</item>
+    </plurals>
+    <plurals name="sel_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="g_relays">
+        <item quantity="one">%d relay</item>
+        <item quantity="other">%d relays</item>
+    </plurals>
+    <plurals name="g_w_plain">
+        <item quantity="one">%d not encrypted is skipped: Tansu never resends readable data.</item>
+        <item quantity="other">%d not encrypted are skipped: Tansu never resends readable data.</item>
+    </plurals>
+    <plurals name="g_w_orphan">
+        <item quantity="one">%d item would be left with no copy on any relay. An encrypted copy goes to the trash.</item>
+        <item quantity="other">%d items would be left with no copy on any relay. An encrypted copy goes to the trash.</item>
+    </plurals>
+    <plurals name="g_del_title">
+        <item quantity="one">Delete %d item?</item>
+        <item quantity="other">Delete %d items?</item>
+    </plurals>
+    <plurals name="g_r_skipped">
+        <item quantity="one">%d not encrypted skipped</item>
+        <item quantity="other">%d not encrypted skipped</item>
+    </plurals>
+    <plurals name="g_acc_note">
+        <item quantity="one">%d list is not copied to another account (only app data).</item>
+        <item quantity="other">%d lists are not copied to another account (only app data).</item>
+    </plurals>
+    <plurals name="g_acc_body">
+        <item quantity="one">%d item is encrypted again for that account. If it already has one with the same name, it is replaced.</item>
+        <item quantity="other">%d items are encrypted again for that account. If it already has one with the same name, it is replaced.</item>
+    </plurals>
+    <plurals name="g_acc_done">
+        <item quantity="one">Copied %d item.</item>
+        <item quantity="other">Copied %d items.</item>
     </plurals>
     <plurals name="relays_count">
         <item quantity="one">%d Tansu relay</item>
