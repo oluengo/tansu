@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.8] (beta)
+## [0.3.8]
 
 - Group operations. Long-press an item or a whole folder (or tap the select button) to choose several items; the selection is kept while moving between folders, and "All" / "None" select a whole folder.
 - Copy to relays: choose one or more relays; each says how many of the chosen items it is missing, and the ones that responded and are missing something come preselected (except relays rated 1–2★). Unencrypted items are skipped, as always.
