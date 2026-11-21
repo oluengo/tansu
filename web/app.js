@@ -1217,9 +1217,14 @@ function settings(sec) {
   if (sec === "about") {
     return `<div class="center">${LOGO.replace('class="logo"', 'class="logo" style="width:72px;height:72px;border-radius:18px"')}<h2 style="margin:10px 0 2px">Tansu</h2><div class="muted">${T("version", VERSION)}</div><p class="small muted">${T("about_ai")}</p></div>
       ${st.install ? `<div class="group"><button class="btn p block" data-a="install">${T("install_app")}</button><p class="small muted">${T("install_note")}</p></div>` : ""}
+      <div class="sec">${T("about_updates")} · ${T("android_app")}</div>
+      <div class="group" style="padding:4px 8px">
+        <a class="row" href="https://zapstore.dev/apps/io.github.oluengo.tansu" target="_blank" rel="noopener"><span class="ico">⚡</span><span class="t"><div class="n">Zapstore</div><div class="m">${T("about_zapstore_sub")}</div></span>↗</a>
+        <a class="row" href="https://github.com/ImranR98/Obtainium" target="_blank" rel="noopener" data-copylink="${REPO}"><span class="ico">⟳</span><span class="t"><div class="n">Obtainium</div><div class="m">${T("about_obtainium_sub")}</div></span>↗</a>
+        <a class="row" href="${REPO}/releases" target="_blank" rel="noopener"><span class="ico">🤖</span><span class="t"><div class="n">${T("about_releases")}</div><div class="m">${T("about_releases_sub")}</div></span>↗</a>
+      </div>
       <div class="group" style="padding:4px 8px">
         <a class="row" href="${REPO}" target="_blank" rel="noopener"><span class="ico">&lt;/&gt;</span><span class="t"><div class="n">${T("about_source")}</div><div class="m">github.com/oluengo/tansu</div></span>↗</a>
-        <a class="row" href="${REPO}/releases" target="_blank" rel="noopener"><span class="ico">🤖</span><span class="t"><div class="n">${T("android_app")}</div><div class="m">${T("android_app_sub")}</div></span>↗</a>
         <a class="row" href="${REPO}/issues/new?labels=bug" target="_blank" rel="noopener"><span class="ico">🐞</span><span class="t"><div class="n">${T("about_bug")}</div><div class="m">${T("about_bug_sub")}</div></span>↗</a>
         <a class="row" href="${REPO}/issues/new?labels=enhancement" target="_blank" rel="noopener"><span class="ico">💡</span><span class="t"><div class="n">${T("about_idea")}</div><div class="m">${T("about_idea_sub")}</div></span>↗</a>
       </div>
@@ -1453,6 +1458,8 @@ document.addEventListener("pointerdown", ev => {
 });
 for (const t of ["pointerup", "pointercancel", "pointermove"]) document.addEventListener(t, ev => { if (t === "pointermove" && Math.abs(ev.movementX) + Math.abs(ev.movementY) < 4) return; clearTimeout(pressT); });
 document.addEventListener("contextmenu", ev => { if (ev.target.closest("[data-keys]")) ev.preventDefault(); });
+// Enlaces que además copian algo (Obtainium: el enlace del repositorio)
+document.addEventListener("click", ev => { const a = ev.target.closest("[data-copylink]"); if (a) navigator.clipboard?.writeText(a.dataset.copylink).then(() => toast(T("about_link_copied")), () => {}); }, true);
 document.addEventListener("click", ev => {
   if (pressed) { pressed = false; ev.preventDefault(); return; }
   const el = ev.target.closest("[data-a]"); if (!el) return;

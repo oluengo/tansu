@@ -24,6 +24,9 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.NewReleases
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +56,8 @@ import io.github.oluengo.tansu.ui.common.Group
 import java.util.Locale
 
 const val REPO_URL = "https://github.com/oluengo/tansu"
+const val ZAPSTORE_URL = "https://zapstore.dev/apps/io.github.oluengo.tansu"
+const val OBTAINIUM_URL = "https://github.com/ImranR98/Obtainium"
 const val NOSTRICH_URL = "https://github.com/SovrynMatt/Nostr-Website-Button-Design"
 
 /** Las mismas direcciones que en Usus. Se copian al tocar. */
@@ -133,6 +138,22 @@ fun AboutSection() {
                 }
             }
         }
+    }
+
+    // Dónde instalar y actualizar (como en Usus): Zapstore, Obtainium y las versiones de GitHub
+    androidx.compose.foundation.layout.Spacer(Modifier.size(4.dp))
+    io.github.oluengo.tansu.ui.common.SectionLabel(stringResource(R.string.about_updates))
+    Group {
+        LinkRow(Icons.Outlined.Storefront, R.string.about_zapstore, stringResource(R.string.about_zapstore_sub), "↗") { openUrl(ctx, ZAPSTORE_URL) }
+        HorizontalDivider(color = Ts.colors.line)
+        LinkRow(Icons.Outlined.Update, R.string.about_obtainium, stringResource(R.string.about_obtainium_sub), "↗") {
+            clipboard.setText(androidx.compose.ui.text.AnnotatedString(REPO_URL))
+            android.widget.Toast.makeText(ctx, ctx.getString(R.string.about_link_copied), android.widget.Toast.LENGTH_SHORT).show()
+            // Si Obtainium está instalado, abre «Añadir app» con el enlace; si no, su página
+            runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("obtainium://add/$REPO_URL"))) }.onFailure { openUrl(ctx, OBTAINIUM_URL) }
+        }
+        HorizontalDivider(color = Ts.colors.line)
+        LinkRow(Icons.Outlined.NewReleases, R.string.about_releases, stringResource(R.string.about_releases_sub), "↗") { openUrl(ctx, "$REPO_URL/releases") }
     }
 
     Box(Modifier.padding(top = 8.dp)) {

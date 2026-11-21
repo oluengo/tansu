@@ -322,6 +322,14 @@
     <string name="g_r_ignored">ignored the deletion (still has %1$d)</string>
     <string name="g_readonly">Read-only account: it cannot sign deletions.</string>
     <string name="g_done">Done</string>
+    <string name="about_updates">Install and updates</string>
+    <string name="about_zapstore">Zapstore</string>
+    <string name="about_zapstore_sub">The Nostr app store: install Tansu and get its updates there</string>
+    <string name="about_obtainium">Obtainium</string>
+    <string name="about_obtainium_sub">Updates from GitHub: add github.com/oluengo/tansu (link copied)</string>
+    <string name="about_releases">All versions</string>
+    <string name="about_releases_sub">APK and release notes on GitHub</string>
+    <string name="about_link_copied">Link copied</string>
     <string name="credits_title">Credits</string>
     <string name="credits_nostrich">Nostr icon: Purple Nostrich by SovrynMatt</string>
     <string name="credits_nostrich_sub">Free and open source; vectorized for the Tansu icon</string>

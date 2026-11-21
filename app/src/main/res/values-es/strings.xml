@@ -322,6 +322,14 @@
     <string name="g_r_ignored">no ha hecho caso del borrado (sigue teniendo %1$d)</string>
     <string name="g_readonly">Cuenta solo de lectura: no puede firmar borrados.</string>
     <string name="g_done">Hecho</string>
+    <string name="about_updates">Instalar y actualizar</string>
+    <string name="about_zapstore">Zapstore</string>
+    <string name="about_zapstore_sub">La tienda de apps de Nostr: instala Tansu y recibe ahí sus actualizaciones</string>
+    <string name="about_obtainium">Obtainium</string>
+    <string name="about_obtainium_sub">Actualizaciones desde GitHub: añade github.com/oluengo/tansu (se copia el enlace)</string>
+    <string name="about_releases">Todas las versiones</string>
+    <string name="about_releases_sub">APK y novedades en GitHub</string>
+    <string name="about_link_copied">Enlace copiado</string>
     <string name="credits_title">Créditos</string>
     <string name="credits_nostrich">Icono de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Libre y de código abierto; vectorizado para el icono de Tansu</string>

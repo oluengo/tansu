@@ -322,6 +322,14 @@
     <string name="g_r_ignored">no ha fet cas de l\'esborrat (encara en té %1$d)</string>
     <string name="g_readonly">Compte només de lectura: no pot signar esborrats.</string>
     <string name="g_done">Fet</string>
+    <string name="about_updates">Instal·lar i actualitzar</string>
+    <string name="about_zapstore">Zapstore</string>
+    <string name="about_zapstore_sub">La botiga d\'apps de Nostr: instal·la Tansu i rep-hi les actualitzacions</string>
+    <string name="about_obtainium">Obtainium</string>
+    <string name="about_obtainium_sub">Actualitzacions des de GitHub: afegeix github.com/oluengo/tansu (es copia l\'enllaç)</string>
+    <string name="about_releases">Totes les versions</string>
+    <string name="about_releases_sub">APK i novetats a GitHub</string>
+    <string name="about_link_copied">Enllaç copiat</string>
     <string name="credits_title">Crèdits</string>
     <string name="credits_nostrich">Icona de Nostr: Purple Nostrich de SovrynMatt</string>
     <string name="credits_nostrich_sub">Lliure i de codi obert; vectoritzat per a la icona de Tansu</string>

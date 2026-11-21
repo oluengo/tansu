@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- About: new "Install and updates" section with Zapstore, Obtainium (copies the repository link and opens Obtainium's "Add app") and all versions on GitHub, as in Usus.
+
 ## [0.3.8]
 
 - Group operations. Long-press an item or a whole folder (or tap the select button) to choose several items; the selection is kept while moving between folders, and "All" / "None" select a whole folder.
